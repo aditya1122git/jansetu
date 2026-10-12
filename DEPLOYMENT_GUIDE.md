@@ -50,9 +50,17 @@ npm.cmd start
 
 Open `http://localhost:5000`. During frontend development, run `npm.cmd run dev:frontend` in another terminal; Vite proxies `/api` to port 5000.
 
-## 5. Docker
+## 5. Docker (local)
 
-The Compose service reads secrets from `backend/.env`:
+Docker Compose reads variable substitution values from a `.env` file beside
+`docker-compose.yml`, not from `backend/.env`. Create the root file without
+committing it:
+
+```powershell
+Copy-Item backend/.env .env
+```
+
+Then start the service:
 
 ```powershell
 docker compose up -d --build
@@ -60,7 +68,46 @@ docker compose up -d --build
 
 Uploads are stored in the `jansetu_uploads` volume. Application data is stored in MongoDB Atlas and should be backed up through Atlas backup policies.
 
-## 6. Production notes
+## 6. Hostinger VPS Docker Manager
+
+Use **VPS -> Docker Manager -> Projects -> Compose -> Compose from URL**. The
+source must be the direct Compose-file URL, not the repository home page:
+
+```text
+https://raw.githubusercontent.com/aditya1122git/jansetu/main/docker-compose.yml
+```
+
+Use a simple project name such as `jansetu-bihar`. The GitHub repository must
+be public for an unauthenticated raw URL. For a private repository, either make
+the file/repository accessible to Hostinger or deploy with Hostinger's GitHub
+Action and a personal access token.
+
+Set these variables in the Hostinger project environment before starting or
+redeploying the container:
+
+```dotenv
+MONGODB_URI=mongodb+srv://...
+JWT_SECRET=replace-with-a-long-random-secret
+MAX_UPLOAD_SIZE_MB=200
+APP_PORT=5000
+```
+
+Do not paste `backend/.env` into Git or commit production secrets.
+
+### Fix `Docker project not found`
+
+This message means the Docker Manager has no successfully created project to
+deploy. Return to **Docker Manager -> Projects**, remove the failed card if it
+exists, and create a new Compose project using the direct URL above. Do not use
+the old deployment/preview page after project creation has failed.
+
+If creation still fails, open **Web Console** and inspect:
+
+```sh
+cat /docker/jansetu-bihar/.build.log
+```
+
+## 7. Production notes
 
 - Keep `ALLOW_DEMO_LOGIN=false`.
 - Use HTTPS through the supplied Nginx reverse-proxy configuration.

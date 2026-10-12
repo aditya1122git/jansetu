@@ -11,8 +11,11 @@ services:
     environment:
       PORT: "5000"
       NODE_ENV: production
-      MONGODB_URI: "${MONGODB_URI:?Set MONGODB_URI in Hostinger project environment}"
-      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in Hostinger project environment}"
+      # Keep Compose project creation independent from secret availability.
+      # The application fails fast with a clear log message if either value is
+      # missing, while deployment panels can still create the project first.
+      MONGODB_URI: "${MONGODB_URI:-}"
+      JWT_SECRET: "${JWT_SECRET:-}"
       MAX_UPLOAD_SIZE_MB: "${MAX_UPLOAD_SIZE_MB:-200}"
     volumes:
       - jansetu_uploads:/app/backend/uploads

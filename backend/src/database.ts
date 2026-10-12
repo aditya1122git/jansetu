@@ -13,7 +13,7 @@ const objectIdModels = new Set<ModelName>([
 ]);
 
 const uri = process.env.MONGODB_URI;
-if (!uri) throw new Error('MONGODB_URI is required in backend/.env');
+if (!uri) throw new Error('MONGODB_URI is required. Set it in backend/.env locally or in the deployment environment.');
 
 const client = new MongoClient(uri);
 let connection: Promise<Db> | null = null;
