@@ -1,0 +1,39 @@
+services:
+  jansetu-portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jansetu-bihar-portal
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${APP_PORT:-5000}:5000"
+    environment:
+      PORT: "5000"
+      NODE_ENV: production
+      MONGODB_URI: "${MONGODB_URI:?Set MONGODB_URI in Hostinger project environment}"
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in Hostinger project environment}"
+      MAX_UPLOAD_SIZE_MB: "${MAX_UPLOAD_SIZE_MB:-200}"
+    volumes:
+      - jansetu_uploads:/app/backend/uploads
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  jansetu_uploads:
+    driver: local

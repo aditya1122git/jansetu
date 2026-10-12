@@ -1,0 +1,542 @@
+﻿:root {
+    --primary:#1C4D8D;
+    --light:#EEEEEE;
+}
+
+.topbar {
+    background-color: #FBFBFB;
+    font-size: 14px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+    .topbar a {
+        color: #0066b3;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .topbar a:hover {
+            text-decoration: underline;
+        }
+
+.working-hours {
+    color: #3a5670;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.hours-separator {
+    color: #a0b8d0;
+    margin: 0 10px 0 6px;
+    font-weight: 400;
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .working-hours {
+        display: block;
+        white-space: normal;
+        margin-top: 4px;
+        margin-left: 24px;
+    }
+
+    .hours-separator {
+        display: none;
+    }
+
+    .topbar .col-12 {
+        text-align: center;
+    }
+
+    .topbar .col-md-6 {
+        text-align: center !important;
+    }
+}
+
+
+@media (max-width: 480px) {
+    .working-hours {
+        margin-left: 0;
+        font-size:13px;
+    }
+}
+
+.header-bg {
+    background-image: url('Assets/Web_Images/header-bg.webp');
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.logo-box {
+    background: #1C4D8D;
+    color: #fff;
+    font-weight: 700;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 18px;
+}
+
+.portal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1C4D8D;
+}
+
+.portal-tagline {
+    font-size: 13px;
+    color: #555;
+}
+
+.login-btn-1 {
+    background: #1C4D8D;
+    color: #fff;
+    padding: 10px 8px;
+    border-radius: 30px;
+    font-weight: 500;
+}
+
+    .login-btn-1:hover {
+        background: #163c6f;
+        color: #fff;
+    }
+
+@media (max-width:768px) {
+
+    .portal-title {
+        font-size: 11px;
+    }
+
+    .portal-tagline {
+        font-size: 12px;
+    }
+
+    .logo-box {
+        padding: 10px 14px;
+        font-size: 16px;
+    }
+
+    .login-btn-1 {
+        margin-top: 10px;
+    }
+}
+
+/*Navbar*/
+
+.navbar {
+    background-color: #1C4D8D;
+}
+
+.nav-link {
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+    .nav-link:hover {
+        background-color: #EEEEEE;
+        color: #1C4D8D;
+    }
+
+.dropdown-item:hover {
+    background-color: #1C4D8D;
+    color: white;
+}
+
+/*Footer*/
+
+.footer-section {
+    background: #1C4D8D;
+    color: #fff;
+    padding-top: 50px;
+}
+
+.footer-title {
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.footer-text {
+    font-size: 14px;
+    color: #dcdcdc;
+    text-align: justify;
+    word-spacing: -2px;
+}
+
+.footer-links {
+    list-style: none;
+    padding: 0;
+}
+
+    .footer-links li {
+        margin-bottom: 8px;
+    }
+
+    .footer-links a {
+        color: #dcdcdc;
+        text-decoration: none;
+        transition: 0.3s;
+    }
+
+        .footer-links a:hover {
+            color: #fff;
+            padding-left: 6px;
+        }
+
+
+.social-icons a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #ffffff20;
+    color: #fff;
+    margin-right: 8px;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+    .social-icons a:hover .fa-facebook-f {
+        color: #1877f2;
+    }
+
+    .social-icons a:hover .fa-x-twitter {
+        color: #0F1419;
+    }
+
+    .social-icons a:hover {
+        background: #fff;
+        transform: translateY(-4px);
+    }
+
+
+.navbar-nav .nav-link.active, .navbar-nav .nav-link.show {
+    color: white;
+    background-color: #1C4D8D;
+}
+
+/*About IGRS*/
+
+.single-line-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 1rem 3.2rem;
+    margin: 2rem 0;
+    box-shadow: 0 30px 55px -20px rgba(0, 44, 75, 0.18), 0 0 0 1px rgba(0, 90, 156, 0.08) inset;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.one-line-quote {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 0.5rem 1rem;
+    margin-bottom: 2.5rem;
+    font-size: 2.8rem;
+    line-height: 1.2;
+}
+
+.voice-part-light {
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-weight: 300;
+    font-size: 2.8rem;
+    color: #2d4d6e;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #1f3f5c, #3d5f83);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    opacity: 0.9;
+}
+
+.divider-dot {
+    font-family: 'Inter', sans-serif;
+    font-weight: 200;
+    font-size: 3.2rem;
+    color: #6c8db0;
+    opacity: 0.5;
+    line-height: 1;
+    transform: translateY(-2px);
+    display: inline-block;
+}
+
+.responsibility-part-serif {
+    font-family: 'Times New Roman', 'Georgia', Cambria, serif;
+    font-weight: 600;
+    font-size: 2.9rem;
+    color: #003057;
+    letter-spacing: -0.01em;
+    text-shadow: 0 1px 2px rgba(0,30,60,0.05);
+    border-bottom: 2px solid rgba(0, 80, 150, 0.25);
+    padding-bottom: 2px;
+}
+
+.desc-minimal {
+    max-width: 100%;
+    margin-top: 1.2rem;
+}
+
+    .desc-minimal p {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-size: 1.08rem;
+        line-height: 1.7;
+        color: #27425f;
+        font-weight: 380;
+        margin-bottom: 1.3rem;
+        text-justify: inter-word;
+    }
+
+.highlight-soft {
+    font-weight: 520;
+    background: linear-gradient(135deg, #eef6ff, #e0ecfe);
+    padding: 0.1rem 0.4rem;
+    border-radius: 6px;
+    color: #003b70;
+}
+
+.base-line {
+    width: 100px;
+    height: 2px;
+    background: linear-gradient(90deg, #afc9e6, #3d70a5, #afc9e6);
+    margin-top: 2rem;
+    border-radius: 2px;
+    opacity: 0.4;
+}
+
+@media (max-width: 700px) {
+    .single-line-card {
+        padding: 2rem 1.8rem;
+    }
+
+    .one-line-quote {
+        font-size: 2rem;
+        gap: 0.3rem 0.8rem;
+    }
+
+    .voice-part-light {
+        font-size: 2rem;
+    }
+
+    .divider-dot {
+        font-size: 2.2rem;
+    }
+
+    .responsibility-part-serif {
+        font-size: 2.1rem;
+    }
+
+    .desc-minimal {
+        max-width: 100%;
+    }
+
+        .desc-minimal p {
+            text-align: justify;
+            hyphens: auto;
+            -webkit-hyphens: auto;
+            -moz-hyphens: auto;
+            word-break: break-word;
+        }
+}
+
+@media (max-width: 480px) {
+    .one-line-quote {
+        font-size: 1.6rem;
+    }
+
+    .voice-part-light {
+        font-size: 1.6rem;
+    }
+
+    .divider-dot {
+        font-size: 1.9rem;
+    }
+
+    .responsibility-part-serif {
+        font-size: 1.7rem;
+    }
+
+    .desc-minimal p {
+        text-align: justify;
+        hyphens: auto;
+        word-spacing: -1px;
+    }
+}
+
+
+/*Cards*/
+
+.minimal-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 1.2rem 2rem;
+    height: 100%;
+    box-shadow: 0 12px 30px -12px rgba(0, 44, 85, 0.12);
+    border: 1px solid rgba(0, 102, 179, 0.08);
+    transition: all 0.2s ease;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+    .minimal-card:hover {
+        box-shadow: 0 20px 35px -14px rgba(0, 80, 140, 0.15);
+        border-color: rgba(0, 102, 179, 0.15);
+    }
+
+.section-minimal-title {
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: #002856;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 2px solid rgba(0, 102, 179, 0.2);
+    padding-bottom: 0.8rem;
+}
+
+/*About IGRS Closed*/
+
+
+/*Card CSS*/
+.minimal-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 1.2rem 2rem;
+    height: 100%;
+    box-shadow: 0 12px 30px -12px rgba(0, 44, 85, 0.12);
+    border: 1px solid rgba(0, 102, 179, 0.08);
+    transition: all 0.2s ease;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+    .minimal-card:hover {
+        box-shadow: 0 20px 35px -14px rgba(0, 80, 140, 0.15);
+        border-color: rgba(0, 102, 179, 0.15);
+    }
+
+.section-minimal-title {
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: #002856;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 2px solid rgba(0, 102, 179, 0.2);
+    padding-bottom: 0.8rem;
+}
+
+.minimal-accent {
+    display: inline-block;
+    width: 8px;
+    height: 24px;
+    background: #0066b3;
+    border-radius: 20px;
+    opacity: 0.7;
+}
+
+.feature-minimal-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+    .feature-minimal-list li {
+        padding: 0.6rem 0 0.6rem 1.5rem;
+        position: relative;
+        font-size: 1.05rem;
+        color: #1f3a5a;
+        font-weight: 400;
+        line-height: 1.4;
+        border-bottom: 1px dashed rgba(0, 90, 150, 0.1);
+    }
+
+        .feature-minimal-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-minimal-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 1.1rem;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #0066b3;
+            opacity: 0.7;
+            box-shadow: 0 0 0 2px rgba(0, 102, 179, 0.2);
+        }
+
+.steps-minimal {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.step-minimal-item {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px dashed rgba(0, 90, 150, 0.1);
+}
+
+    .step-minimal-item:last-child {
+        border-bottom: none;
+    }
+
+.step-minimal-number {
+    font-size: 1.2rem;
+    font-weight: 550;
+    color: #0066b3;
+    background: rgba(0, 102, 179, 0.06);
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    font-family: 'Inter', monospace;
+    transition: background 0.2s;
+}
+
+.step-minimal-item:hover .step-minimal-number {
+    background: rgba(0, 102, 179, 0.15);
+}
+
+.step-minimal-text {
+    font-size: 1.02rem;
+    color: #1e3a5f;
+    font-weight: 390;
+    line-height: 1.4;
+}
+
+.minimal-footer-line {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #a5c9ff, #004c99, #a5c9ff, transparent);
+    margin: 2rem auto 0.5rem;
+    opacity: 0.3;
+}
+
+@media (max-width: 768px) {
+    .col-md-6 {
+        margin-bottom: 1.5rem;
+    }
+
+    .minimal-card {
+        padding: 1.8rem 1.5rem;
+    }
+
+    .section-minimal-title {
+        font-size: 1.6rem;
+    }
+}

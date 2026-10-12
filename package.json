@@ -1,0 +1,19 @@
+{
+  "name": "jansetu-bihar-portal",
+  "version": "2.0.0",
+  "description": "JanSetu Bihar — Application & Grievance Management Portal",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "db:setup": "npm --prefix backend run db:setup",
+    "db:seed-admin": "npm --prefix backend run seed:admin",
+    "db:seed-master": "npm --prefix backend run seed:master",
+    "db:clear": "npm --prefix backend run db:clear",
+    "start": "node backend/dist/index.js",
+    "start:prod": "node backend/dist/index.js",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev"
+  }
+}
