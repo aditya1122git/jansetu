@@ -17,6 +17,10 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       status: { not: 'COMPLETED' }
     };
 
+    if (req.user?.role === 'DATA_ENTRY') {
+      where.createdById = req.user.id;
+    }
+
     if (filterOverdue === 'true') {
       where.nextFollowUpDate = { lte: now };
     }
@@ -75,6 +79,9 @@ router.post('/:applicationId/add', authenticateToken, requireWrite, async (req: 
     const app = await database.application.findUnique({ where: { id: applicationId } });
     if (!app) {
       return res.status(404).json({ error: 'Application record not found.' });
+    }
+    if (req.user?.role === 'DATA_ENTRY' && app.createdById !== req.user.id) {
+      return res.status(403).json({ error: 'Operators can only update applications entered by their own account.' });
     }
 
     const previousStatus = app.status;

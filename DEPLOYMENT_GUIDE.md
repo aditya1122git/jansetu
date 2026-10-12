@@ -1,4 +1,4 @@
-# JanSetu Bihar — Deployment Guide
+# E-Sewak Tarapur — Deployment Guide
 
 ## Project structure
 
@@ -12,6 +12,10 @@
 2. Copy `backend/.env.example` to `backend/.env`.
 3. Set `MONGODB_URI` to the Atlas connection string. Keep the database name in the URI, for example `jansetu`.
 4. Set a long, random `JWT_SECRET`.
+5. For password-reset email, enable Google 2-Step Verification, create an App Password, and set `SMTP_USER`, `SMTP_APP_PASSWORD`, and `SMTP_FROM` from `.env.example`. Never use the normal Google account password.
+6. Set `APP_BASE_URL` to the public HTTPS URL of this portal. Password-reset email links are generated from this value.
+
+The reset mailer uses implicit TLS on `smtp.gmail.com:465`. Ensure the local firewall or Hostinger VPS permits outbound TCP port 465; a blocked port produces an `ETIMEDOUT` error even when the Google credentials are correct.
 
 Do not commit `backend/.env`; it is ignored by Git.
 
@@ -90,6 +94,12 @@ MONGODB_URI=mongodb+srv://...
 JWT_SECRET=replace-with-a-long-random-secret
 MAX_UPLOAD_SIZE_MB=200
 APP_PORT=5000
+SMTP_USER=your-google-account@gmail.com
+SMTP_APP_PASSWORD=your-16-character-google-app-password
+SMTP_FROM="E-Sewak Tarapur <your-google-account@gmail.com>"
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+APP_BASE_URL=https://your-domain.example
 ```
 
 Do not paste `backend/.env` into Git or commit production secrets.

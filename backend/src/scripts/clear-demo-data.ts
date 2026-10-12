@@ -4,7 +4,7 @@ import path from 'path';
 
 
 async function clearDemoData() {
-  console.log('=== CLEARING JANSETU BIHAR DEMO & SAMPLE DATA ===');
+  console.log('=== CLEARING E-SEWAK TARAPUR DEMO & SAMPLE DATA ===');
 
   try {
     // 1. Delete all FollowUp records

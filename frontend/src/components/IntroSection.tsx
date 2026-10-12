@@ -22,8 +22,8 @@ export const IntroSection: React.FC<IntroSectionProps> = ({ language }) => {
 
           <p className="text-sm sm:text-base text-gray-700 leading-relaxed text-justify sm:text-center">
             {language === 'hi'
-              ? 'किसी भी आवेदन की सही जानकारी और समय पर समीक्षा उसके प्रभावी प्रबंधन में महत्वपूर्ण भूमिका निभाती है। JanSetu Bihar आवेदन रिकॉर्ड को एक सुव्यवस्थित स्थान पर रखने, महत्वपूर्ण मामलों को अलग पहचानने और लंबित आवेदनों पर नियमित फॉलो-अप बनाए रखने में सहायता करता है।'
-              : 'Accurate recordkeeping and timely review play an indispensable role in efficient application governance. JanSetu Bihar assists in maintaining all intake records in a structured repository, distinguishing high-priority matters, and sustaining regular follow-up on active files.'}
+              ? 'किसी भी आवेदन की सही जानकारी और समय पर समीक्षा उसके प्रभावी प्रबंधन में महत्वपूर्ण भूमिका निभाती है। E-Sewak Tarapur आवेदन रिकॉर्ड को एक सुव्यवस्थित स्थान पर रखने, महत्वपूर्ण मामलों को अलग पहचानने और लंबित आवेदनों पर नियमित फॉलो-अप बनाए रखने में सहायता करता है।'
+              : 'Accurate recordkeeping and timely review play an indispensable role in efficient application governance. E-Sewak Tarapur assists in maintaining all intake records in a structured repository, distinguishing high-priority matters, and sustaining regular follow-up on active files.'}
           </p>
         </div>
 

@@ -80,7 +80,7 @@ function toMongoWhere(model: ModelName, where: any = {}): any {
 function defaults(model: ModelName, data: any): any {
   const now = new Date();
   const modelDefaults: Record<ModelName, any> = {
-    User: { role: 'DATA_ENTRY', department: 'JanSetu Administration', isActive: true, createdAt: now, updatedAt: now },
+    User: { role: 'DATA_ENTRY', department: 'E-Sewak Tarapur Administration', isActive: true, createdAt: now, updatedAt: now },
     District: { state: 'Bihar', isActive: true, createdAt: now, updatedAt: now },
     AssemblyConstituency: { reservation: 'GEN', isActive: true, createdAt: now, updatedAt: now },
     ComplaintCategory: { isActive: true, createdAt: now, updatedAt: now },
@@ -139,14 +139,20 @@ async function attachIncludes(model: ModelName, item: any, include?: any): Promi
   }
   if (model === 'District') {
     if (include.constituencies) out.constituencies = await new Repository('AssemblyConstituency').findMany({ where: { districtId: item.id } });
-    if (include.applications) out.applications = await new Repository('Application').findMany({ where: { districtId: item.id }, ...(include.applications === true ? {} : include.applications) });
+    if (include.applications) {
+      const args = include.applications === true ? {} : include.applications;
+      out.applications = await new Repository('Application').findMany({ ...args, where: { districtId: item.id, ...(args.where || {}) } });
+    }
     if (include._count) out._count = {
       constituencies: await new Repository('AssemblyConstituency').count({ where: { districtId: item.id } }),
       applications: await new Repository('Application').count({ where: { districtId: item.id } })
     };
   }
   if (model === 'ComplaintCategory') {
-    if (include.applications) out.applications = await new Repository('Application').findMany({ where: { categoryId: item.id }, ...(include.applications === true ? {} : include.applications) });
+    if (include.applications) {
+      const args = include.applications === true ? {} : include.applications;
+      out.applications = await new Repository('Application').findMany({ ...args, where: { categoryId: item.id, ...(args.where || {}) } });
+    }
     if (include._count) out._count = { applications: await new Repository('Application').count({ where: { categoryId: item.id } }) };
   }
   return out;
@@ -248,8 +254,11 @@ export const database = {
       db.collection('ComplaintCategory').createIndex({ name: 1 }, { unique: true, name: 'ComplaintCategory_name_key' }),
       db.collection('ComplaintCategory').createIndex({ code: 1 }, { unique: true, name: 'ComplaintCategory_code_key' }),
       db.collection('Application').createIndex({ applicationId: 1 }, { unique: true, name: 'Application_applicationId_key' }),
+      db.collection('Application').createIndex({ createdById: 1, dateReceived: -1 }, { name: 'Application_operator_date_idx' }),
+      db.collection('Application').createIndex({ blockLgdCode: 1, dateReceived: -1 }, { name: 'Application_block_date_idx' }),
       db.collection('SystemSetting').createIndex({ key: 1 }, { unique: true, name: 'SystemSetting_key_key' }),
-      db.collection('PasswordResetToken').createIndex({ token: 1 }, { unique: true, name: 'PasswordResetToken_token_key' })
+      db.collection('PasswordResetToken').createIndex({ token: 1 }, { unique: true, name: 'PasswordResetToken_token_key' }),
+      db.collection('PasswordResetToken').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'PasswordResetToken_expiry_ttl' })
     ]);
   }
 };

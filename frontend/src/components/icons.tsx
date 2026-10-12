@@ -7,13 +7,15 @@ type IconProps = React.HTMLAttributes<HTMLElement> & {
 
 const icon = (fontAwesomeClass: string) =>
   React.forwardRef<HTMLElement, IconProps>(({ className = '', size, style, strokeWidth: _strokeWidth, ...props }, ref) => (
-    <i
+    <span
       ref={ref}
       aria-hidden="true"
-      className={`${fontAwesomeClass} inline-flex shrink-0 items-center justify-center ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center ${className}`}
       style={{ fontSize: size, ...style }}
       {...props}
-    />
+    >
+      <i className={fontAwesomeClass} aria-hidden="true" />
+    </span>
   ));
 
 export const AlertCircle = icon('fa-solid fa-circle-exclamation');
@@ -35,6 +37,7 @@ export const Compass = icon('fa-solid fa-compass');
 export const Database = icon('fa-solid fa-database');
 export const Download = icon('fa-solid fa-download');
 export const Edit2 = icon('fa-solid fa-pen-to-square');
+export const Envelope = icon('fa-solid fa-envelope');
 export const ExternalLink = icon('fa-solid fa-arrow-up-right-from-square');
 export const Eye = icon('fa-solid fa-eye');
 export const EyeOff = icon('fa-solid fa-eye-slash');

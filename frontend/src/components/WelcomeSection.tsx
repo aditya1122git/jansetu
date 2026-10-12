@@ -20,15 +20,15 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ language }) => {
                 <Sparkles className="w-5 h-5" />
               </span>
               <h3 className="text-xl sm:text-2xl font-black text-[#1C4D8D] tracking-tight">
-                {language === 'hi' ? 'JanSetu Bihar में आपका स्वागत है' : 'Welcome to JanSetu Bihar'}
+                {language === 'hi' ? 'E-Sewak Tarapur में आपका स्वागत है' : 'Welcome to E-Sewak Tarapur'}
               </h3>
             </div>
 
             {/* Main Paragraph */}
             <p className="text-sm sm:text-base text-gray-700 leading-relaxed font-normal text-justify">
               {language === 'hi'
-                ? 'जनसमस्याओं और आवेदनों का बेहतर प्रबंधन एक व्यवस्थित प्रक्रिया से शुरू होता है। JanSetu Bihar का उद्देश्य आवेदन संबंधी जानकारी को सुव्यवस्थित रखना, लंबित मामलों पर नज़र बनाए रखना और प्रत्येक आवेदन की प्रगति का रिकॉर्ड उपलब्ध कराना है।'
-                : 'Effective management of citizen grievances and applications begins with an organized process. The mission of JanSetu Bihar is to streamline application records, maintain vigilant oversight on pending matters, and provide transparent progress tracking for every record.'}
+                ? 'जनसमस्याओं और आवेदनों का बेहतर प्रबंधन एक व्यवस्थित प्रक्रिया से शुरू होता है। E-Sewak Tarapur का उद्देश्य आवेदन संबंधी जानकारी को सुव्यवस्थित रखना, लंबित मामलों पर नज़र बनाए रखना और प्रत्येक आवेदन की प्रगति का रिकॉर्ड उपलब्ध कराना है।'
+                : 'Effective management of citizen grievances and applications begins with an organized process. The mission of E-Sewak Tarapur is to streamline application records, maintain vigilant oversight on pending matters, and provide transparent progress tracking for every record.'}
             </p>
 
             {/* Supporting sentence highlighted */}

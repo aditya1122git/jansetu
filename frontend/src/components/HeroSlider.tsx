@@ -5,22 +5,22 @@ const slides = [
   {
     id: 1,
     image: '/assets/Web_Images/Slide2.webp',
-    alt: 'बढ़ता बिहार, बदलता बिहार - JanSetu Bihar'
+    alt: 'बढ़ता बिहार, बदलता बिहार - E-Sewak Tarapur'
   },
   {
     id: 2,
     image: '/assets/Web_Images/Slide1.webp',
-    alt: 'सम्राट का विज़न, नए बिहार का मिशन - JanSetu Bihar'
+    alt: 'सम्राट का विज़न, नए बिहार का मिशन - E-Sewak Tarapur'
   },
   {
     id: 3,
     image: '/assets/Web_Images/Slide3.webp',
-    alt: 'सम्राट की हुंकार, विकास को मिली रफ़्तार - JanSetu Bihar'
+    alt: 'सम्राट की हुंकार, विकास को मिली रफ़्तार - E-Sewak Tarapur'
   },
   {
     id: 4,
     image: '/assets/Web_Images/Slide4.webp',
-    alt: 'सम्राट का संकल्प, बिहार का विकल्प - JanSetu Bihar'
+    alt: 'सम्राट का संकल्प, बिहार का विकल्प - E-Sewak Tarapur'
   }
 ];
 

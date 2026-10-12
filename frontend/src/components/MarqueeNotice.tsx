@@ -15,8 +15,8 @@ export const MarqueeNotice: React.FC<MarqueeNoticeProps> = ({ language }) => {
         </div>
         <div className="whitespace-nowrap animate-marquee text-[#1C4D8D] font-medium text-xs sm:text-sm">
           {language === 'hi'
-            ? 'JanSetu Bihar (जनसेतु बिहार) — आवेदन एवं शिकायत प्रबंधन पोर्टल। "सम्राट का विज़न, नए बिहार का मिशन।" — राज्य के सभी 38 जिलों एवं 243 निर्वाचन क्षेत्रों में पारदर्शी समाधान व अनुश्रवण व्यवस्था सक्रिय है।'
-            : 'Welcome to JanSetu Bihar — Application & Grievance Management Portal. "Samrat’s Vision, Mission of New Bihar." — Active grievance intake, prioritization, and tracking across all 38 Districts & 243 Assembly Constituencies.'}
+            ? 'E-Sewak Tarapur (ई-सेवक तारापुर) — मुंगेर जिले के तारापुर विधानसभा क्षेत्र हेतु आवेदन एवं शिकायत प्रबंधन पोर्टल।'
+            : 'Welcome to E-Sewak Tarapur — Application & Grievance Management Portal for Tarapur Assembly Constituency, Munger.'}
         </div>
       </div>
     </div>

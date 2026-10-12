@@ -28,7 +28,8 @@ import {
   Plus,
   LayoutGrid,
   List,
-  ZoomIn
+  ZoomIn,
+  Lock
 } from './icons';
 import { api } from '../services/api';
 import { Application, User } from '../types';
@@ -82,6 +83,8 @@ export const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   // Delete modal / form
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Document & Evidence Viewer Modal
   const [previewDoc, setPreviewDoc] = useState<PreviewDocState | null>(null);
@@ -177,15 +180,19 @@ export const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
   const handleDeleteSubmit = async () => {
     if (!app) return;
+    if (!deletePassword) {
+      setDeleteError(language === 'hi' ? 'कृपया अपना अकाउंट पासवर्ड दर्ज करें।' : 'Please enter your account password.');
+      return;
+    }
     setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await api.deleteApplication(app.id);
+      await api.deleteApplication(app.id, deletePassword);
       setShowDeleteModal(false);
       if (onRefreshStats) onRefreshStats();
-      alert(language === 'hi' ? 'आवेदन रिकॉर्ड सफलतापूर्वक हटा दिया गया।' : 'Application record deleted successfully from your database.');
       onBack();
     } catch (err: any) {
-      alert('Error deleting application: ' + err.message);
+      setDeleteError(err.message || 'Unable to delete this application.');
     } finally {
       setIsDeleting(false);
     }
@@ -197,7 +204,7 @@ export const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
   const handleExportSummary = () => {
     if (!app) return;
-    const summaryText = `JANSETU BIHAR - APPLICATION SUMMARY REPORT
+    const summaryText = `E-SEWAK TARAPUR - APPLICATION SUMMARY REPORT
 ==================================================
 Application ID: ${app.applicationId}
 Status: ${app.status}
@@ -212,6 +219,8 @@ Mobile: ${app.mobileNumber}
 Address: ${app.address || 'N/A'}
 District: ${app.district?.name || 'N/A'}
 Assembly Constituency: ${app.constituency?.name || app.customConstituency || 'N/A'} (${app.constituency?.acCode || app.verifiedAcCode || 'N/A'})
+Block: ${app.blockName || 'N/A'} (LGD ${app.blockLgdCode || 'N/A'})
+Entry Created By: ${app.createdByName || 'Legacy record'} (${app.createdByEmail || 'N/A'})
 
 GRIEVANCE DETAILS:
 Category: ${app.categoryName || app.category?.name || 'General'}
@@ -223,14 +232,14 @@ Assigned Officer: ${app.assignedEmployee || 'Unassigned'}
 Internal Remarks: ${app.internalRemarks || 'None'}
 
 Report Generated: ${new Date().toLocaleString()}
-Portal: JanSetu Bihar (Application & Grievance Management Portal)
+Portal: E-Sewak Tarapur (Application & Grievance Management Portal)
 ==================================================`;
 
     const blob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `JanSetu_Bihar_${app.applicationId}_Summary.txt`;
+    link.download = `E_Sewak_Tarapur_${app.applicationId}_Summary.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -389,7 +398,7 @@ Portal: JanSetu Bihar (Application & Grievance Management Portal)
             </button>
             <div className="h-4 w-px bg-gray-300 hidden sm:block" />
             <nav className="hidden sm:flex items-center gap-2 text-xs text-gray-500 font-medium">
-              <span className="hover:text-gray-800 cursor-pointer" onClick={onBack}>JanSetu Bihar</span>
+              <span className="hover:text-gray-800 cursor-pointer" onClick={onBack}>E-Sewak Tarapur</span>
               <span>&rsaquo;</span>
               <span className="hover:text-gray-800 cursor-pointer" onClick={onBack}>
                 {language === 'hi' ? 'आवेदन' : 'Applications'}
@@ -450,7 +459,11 @@ Portal: JanSetu Bihar (Application & Grievance Management Portal)
 
             {canModify && (
               <button
-                onClick={() => setShowDeleteModal(true)}
+                onClick={() => {
+                  setDeletePassword('');
+                  setDeleteError(null);
+                  setShowDeleteModal(true);
+                }}
                 className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs ml-1"
                 title="Permanently Delete Application Record"
               >
@@ -568,6 +581,19 @@ Portal: JanSetu Bihar (Application & Grievance Management Portal)
                     <span>{app.district?.name || '—'} &bull; {app.constituency?.name || app.customConstituency || '—'} ({app.constituency?.acCode || app.verifiedAcCode || '—'})</span>
                   </div>
                 </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-gray-100">
+                  <div className="text-gray-400 uppercase font-semibold text-[10px]">Block & LGD Code</div>
+                  <div className="text-sm font-bold text-gray-900 mt-0.5">{app.blockName || '—'} <span className="font-mono text-[#1C4D8D]">({app.blockLgdCode || '—'})</span></div>
+                </div>
+
+                {currentUser?.role === 'ADMIN' && (
+                  <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                    <div className="text-blue-500 uppercase font-semibold text-[10px]">Entry Created By</div>
+                    <div className="text-sm font-bold text-gray-900 mt-0.5">{app.createdByName || 'Legacy record'}</div>
+                    <div className="text-[10px] text-gray-500">{app.createdByEmail || 'Creator information unavailable'}</div>
+                  </div>
+                )}
 
                 <div className="sm:col-span-2 bg-slate-50 p-3 rounded-xl border border-gray-100">
                   <div className="text-gray-400 uppercase font-semibold text-[10px]">Full Postal Address</div>
@@ -1388,18 +1414,50 @@ Portal: JanSetu Bihar (Application & Grievance Management Portal)
                 : 'Warning: This will permanently delete this application record, associated timeline entries, and stored documents from your personal database. This action cannot be undone.'}
             </div>
 
+            <div>
+              <label htmlFor="detail-delete-password" className="mb-1.5 block text-xs font-bold text-gray-700">
+                {language === 'hi' ? 'अकाउंट पासवर्ड' : 'Account password'}
+              </label>
+              <div className="flex items-center gap-2 rounded-xl border border-gray-300 px-3 focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-100">
+                <Lock className="h-4 w-4 flex-none text-gray-400" />
+                <input
+                  id="detail-delete-password"
+                  type="password"
+                  autoFocus
+                  autoComplete="current-password"
+                  value={deletePassword}
+                  onChange={(event) => {
+                    setDeletePassword(event.target.value);
+                    setDeleteError(null);
+                  }}
+                  className="h-11 min-w-0 flex-1 border-0 bg-transparent text-sm outline-none"
+                  placeholder="Enter your password"
+                />
+              </div>
+              {deleteError && (
+                <div className="mt-2 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700" role="alert">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-none" />
+                  <span>{deleteError}</span>
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 disabled={isDeleting}
-                onClick={() => setShowDeleteModal(false)}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword('');
+                  setDeleteError(null);
+                }}
                 className="px-4 py-2 border rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100"
               >
                 {language === 'hi' ? 'रद्द करें' : 'Cancel'}
               </button>
               <button
                 type="button"
-                disabled={isDeleting}
+                disabled={isDeleting || !deletePassword}
                 onClick={handleDeleteSubmit}
                 className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow disabled:opacity-50 flex items-center gap-1.5"
               >

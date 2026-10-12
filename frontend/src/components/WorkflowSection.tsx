@@ -8,7 +8,6 @@ interface WorkflowSectionProps {
 export const WorkflowSection: React.FC<WorkflowSectionProps> = ({ language }) => {
   const steps = [
     {
-      step: '01',
       title: language === 'hi' ? 'आवेदन दर्ज करें' : 'Register Intake',
       desc: language === 'hi' ? 'आवश्यक विवरण और दस्तावेज जोड़ें।' : 'Enter applicant information, constituency, and attachments.',
       icon: FilePlus,
@@ -16,7 +15,6 @@ export const WorkflowSection: React.FC<WorkflowSectionProps> = ({ language }) =>
       borderColor: 'border-blue-600'
     },
     {
-      step: '02',
       title: language === 'hi' ? 'प्राथमिकता निर्धारित करें' : 'Set Priority Tier',
       desc: language === 'hi' ? 'आवेदन को Important या Normal श्रेणी में रखें।' : 'Classify into Important or Normal priority categories.',
       icon: SlidersHorizontal,
@@ -24,7 +22,6 @@ export const WorkflowSection: React.FC<WorkflowSectionProps> = ({ language }) =>
       borderColor: 'border-amber-600'
     },
     {
-      step: '03',
       title: language === 'hi' ? 'स्थिति और कार्रवाई अपडेट करें' : 'Update Actions',
       desc: language === 'hi' ? 'आवेदन की प्रगति तथा फॉलो-अप रिकॉर्ड करें।' : 'Log stage updates, officer routing, and follow-up notes.',
       icon: RefreshCw,
@@ -32,7 +29,6 @@ export const WorkflowSection: React.FC<WorkflowSectionProps> = ({ language }) =>
       borderColor: 'border-blue-700'
     },
     {
-      step: '04',
       title: language === 'hi' ? 'रिपोर्ट और समीक्षा' : 'Review & Reports',
       desc: language === 'hi' ? 'आवेदन की वर्तमान स्थिति और संबंधित रिपोर्ट देखें।' : 'Monitor resolution status and audit metrics.',
       icon: BarChart2,
@@ -72,15 +68,7 @@ export const WorkflowSection: React.FC<WorkflowSectionProps> = ({ language }) =>
                   key={idx}
                   className="bg-white rounded-2xl p-5 border border-gray-200/90 shadow-sm hover:shadow-md transition duration-200 text-center relative flex flex-col items-center"
                 >
-                  {/* Step Number Badge */}
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${item.color} text-white flex items-center justify-center font-black text-base shadow-md mb-3`}>
-                    {item.step}
-                  </div>
-
-                  {/* Icon */}
-                  <div className="text-gray-400 mb-2">
-                    <IconComponent className="w-5 h-5 text-gray-600" />
-                  </div>
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${item.color} text-white flex items-center justify-center shadow-md mb-3`}><IconComponent className="w-5 h-5" /></div>
 
                   {/* Title */}
                   <h4 className="font-extrabold text-gray-900 text-base mb-1.5">

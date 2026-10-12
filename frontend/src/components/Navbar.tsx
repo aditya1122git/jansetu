@@ -47,14 +47,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               if (onGoHome) onGoHome();
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="p-2 hover:bg-[#163c6f] rounded transition text-white"
+            className="flex items-center gap-2 p-2 hover:bg-[#163c6f] rounded transition text-white"
             title="Home"
           >
             <Home className="w-5 h-5" />
+            <span className="font-bold text-sm tracking-wide hidden sm:inline-block px-2 border-l border-blue-400">
+              {language === 'hi' ? 'होम' : 'Home'}
+            </span>
           </button>
-          <span className="font-bold text-sm tracking-wide hidden sm:inline-block px-2 border-l border-blue-400">
-            {language === 'hi' ? 'होम' : 'Home'}
-          </span>
         </div>
 
         {/* Desktop Menu */}
@@ -117,13 +117,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>{language === 'hi' ? 'रिपोर्ट व एनालिटिक्स' : 'Reports & Analytics'}</span>
           </button>
 
-          <button
-            onClick={() => onOpenSection('master')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded hover:bg-[#163c6f] transition"
-          >
-            <MapPin className="w-4 h-4 text-yellow-300" />
-            <span>{language === 'hi' ? 'बिहार मास्टर डेटा' : 'Bihar Master Data (38/243)'}</span>
-          </button>
+          {currentUser?.role === 'ADMIN' && (
+            <button
+              onClick={() => onOpenSection('master')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded hover:bg-[#163c6f] transition"
+            >
+              <MapPin className="w-4 h-4 text-yellow-300" />
+              <span>{language === 'hi' ? 'बिहार मास्टर डेटा' : 'Bihar Master Data (38/243)'}</span>
+            </button>
+          )}
 
           {currentUser && currentUser.role === 'ADMIN' && (
             <button
@@ -180,16 +182,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BarChart3 className="w-4 h-4" />
             {language === 'hi' ? 'रिपोर्ट्स व डैशबोर्ड' : 'Reports & Analytics'}
           </button>
-          <button
-            onClick={() => {
-              onOpenSection('master');
-              setIsOpen(false);
-            }}
-            className="w-full text-left py-2 px-3 rounded hover:bg-[#1C4D8D] flex items-center gap-2"
-          >
-            <MapPin className="w-4 h-4" />
-            {language === 'hi' ? 'बिहार 38 जिले व 243 निर्वाचन क्षेत्र' : 'Bihar Master Data (38 Districts & 243 ACs)'}
-          </button>
+          {currentUser.role === 'ADMIN' && (
+            <button
+              onClick={() => {
+                onOpenSection('master');
+                setIsOpen(false);
+              }}
+              className="w-full text-left py-2 px-3 rounded hover:bg-[#1C4D8D] flex items-center gap-2"
+            >
+              <MapPin className="w-4 h-4" />
+              {language === 'hi' ? 'बिहार 38 जिले व 243 निर्वाचन क्षेत्र' : 'Bihar Master Data (38 Districts & 243 ACs)'}
+            </button>
+          )}
           {currentUser && currentUser.role === 'ADMIN' && (
             <button
               onClick={() => {

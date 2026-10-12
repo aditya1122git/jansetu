@@ -1,8 +1,9 @@
-﻿import { database } from '../database';
+import { database } from '../database';
 import { Router, Response } from 'express';
-import { authenticateToken, requireWrite, requireDataEntryOrAdmin, AuthenticatedRequest } from '../middleware/auth';
+import { authenticateToken, requireAdmin, requireWrite, requireDataEntryOrAdmin, AuthenticatedRequest } from '../middleware/auth';
 import multer from 'multer';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 const uploadMem = multer({ storage: multer.memoryStorage() });
@@ -48,6 +49,34 @@ async function generateApplicationId(): Promise<string> {
 // Enforce authentication on all application management routes
 router.use(authenticateToken);
 
+// Destructive actions require the signed-in user's password again. This check
+// intentionally lives on the server so it cannot be bypassed from the browser.
+async function verifyDestructiveActionPassword(req: AuthenticatedRequest, res: Response): Promise<boolean> {
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+  if (!password) {
+    res.status(400).json({ error: 'Please enter your account password to continue.' });
+    return false;
+  }
+
+  const user = req.user?.id
+    ? await database.user.findUnique({ where: { id: req.user.id } })
+    : null;
+
+  if (!user) {
+    res.status(401).json({ error: 'Signed-in user could not be verified. Please login again.' });
+    return false;
+  }
+
+  const passwordMatches = await bcrypt.compare(password, user.password);
+  if (!passwordMatches) {
+    res.status(403).json({ error: 'Incorrect password. No data was deleted.' });
+    return false;
+  }
+
+  return true;
+}
+
 // POST /api/applications - Create new application (Restricted to Admin and Data Entry)
 router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -56,9 +85,8 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
       mobileNumber,
       alternateMobile,
       address,
-      districtId,
-      constituencyId,
-      constituencyName,
+      blockName,
+      blockLgdCode,
       categoryId,
       categoryName,
       category: categoryInput,
@@ -73,7 +101,7 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
     } = req.body;
 
     // 1. Validate basic applicant fields
-    if (!applicantName || !mobileNumber || !address || !districtId || !subject || !description) {
+    if (!applicantName || !mobileNumber || !address || !blockName || !blockLgdCode || !subject || !description) {
       return res.status(400).json({ error: 'Please provide all mandatory applicant and grievance fields.' });
     }
 
@@ -81,56 +109,30 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
       return res.status(400).json({ error: 'Valid 10-digit mobile number is required.' });
     }
 
-    // 2. Validate Assembly Constituency (MANDATORY)
-    if (!constituencyId && !constituencyName) {
-      return res.status(400).json({ error: 'Please enter or select Assembly Constituency.' });
+    // 2. E-Sewak Tarapur serves one fixed constituency with three verified blocks.
+    const tarapurBlocks: Record<string, string> = { Asarganj: '2451', Sangrampur: '2457', Tarapur: '2458' };
+    if (tarapurBlocks[blockName] !== String(blockLgdCode)) {
+      return res.status(400).json({ error: 'Invalid Tarapur block or LGD Block Panchayat Code.' });
+    }
+    if (req.user?.role === 'DATA_ENTRY') {
+      const operator = await database.user.findUnique({ where: { id: req.user.id } });
+      if (!operator?.blockName || !operator?.blockLgdCode) {
+        return res.status(403).json({ error: 'Your operator account is not mapped to a block. Contact the administrator.' });
+      }
+      if (blockName !== operator.blockName || String(blockLgdCode) !== String(operator.blockLgdCode)) {
+        return res.status(403).json({ error: `You can only register applications for your assigned ${operator.blockName} block.` });
+      }
     }
 
-    let finalConstituencyId: number | null = null;
-    let finalVerifiedAcCode = 'UNVERIFIED';
-    let finalCustomConstituency: string | null = null;
-    let isUnverifiedAc = false;
-
-    if (constituencyId) {
-      const constituency = await database.assemblyConstituency.findUnique({
-        where: { id: parseInt(constituencyId) },
-        include: { district: true }
-      });
-
-      if (!constituency) {
-        return res.status(400).json({ error: 'Selected Assembly Constituency not found in official roster.' });
-      }
-
-      if (constituency.districtId !== parseInt(districtId)) {
-        return res.status(400).json({
-          error: `Invalid mapping: Constituency "${constituency.name}" belongs to district "${constituency.district.name}", not selected district ID ${districtId}.`
-        });
-      }
-
-      finalConstituencyId = constituency.id;
-      finalVerifiedAcCode = constituency.acCode;
-      isUnverifiedAc = false;
-    } else if (constituencyName && typeof constituencyName === 'string') {
-      const trimmedAcName = constituencyName.trim();
-      // Search for match in official Assembly roster
-      const matchedAc = await database.assemblyConstituency.findFirst({
-        where: {
-          districtId: parseInt(districtId),
-          name: { equals: trimmedAcName }
-        }
-      });
-
-      if (matchedAc) {
-        finalConstituencyId = matchedAc.id;
-        finalVerifiedAcCode = matchedAc.acCode;
-        isUnverifiedAc = false;
-      } else {
-        // Flag unmatched manual entry for administrative review rather than silently treating as verified
-        finalConstituencyId = null;
-        finalCustomConstituency = trimmedAcName;
-        finalVerifiedAcCode = 'UNVERIFIED';
-        isUnverifiedAc = true;
-      }
+    const mungerDistrict = await database.district.findFirst({ where: { name: { equals: 'Munger' } } });
+    if (!mungerDistrict) {
+      return res.status(503).json({ error: 'Munger district master data is not configured.' });
+    }
+    const tarapurConstituency = await database.assemblyConstituency.findFirst({
+      where: { districtId: mungerDistrict.id, name: { equals: 'Tarapur' } }
+    });
+    if (!tarapurConstituency) {
+      return res.status(503).json({ error: 'Tarapur constituency master data is not configured.' });
     }
 
     // 3. Validate Complaint Category (MANDATORY & MANUAL TEXT ENTRY)
@@ -184,11 +186,13 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
         mobileNumber: mobileNumber.trim(),
         alternateMobile: alternateMobile ? alternateMobile.trim() : null,
         address: address.trim(),
-        districtId: parseInt(districtId),
-        constituencyId: finalConstituencyId,
-        customConstituency: finalCustomConstituency,
-        verifiedAcCode: finalVerifiedAcCode,
-        isUnverifiedAc,
+        districtId: mungerDistrict.id,
+        constituencyId: tarapurConstituency.id,
+        customConstituency: null,
+        verifiedAcCode: tarapurConstituency.acCode,
+        isUnverifiedAc: false,
+        blockName,
+        blockLgdCode: String(blockLgdCode),
         categoryId: finalCategoryId,
         categoryName: finalCategoryName,
         subject: subject.trim(),
@@ -200,7 +204,10 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
         documents: documents ? (typeof documents === 'string' ? documents : JSON.stringify(documents)) : null,
         dateReceived: receivedDateObj,
         nextFollowUpDate: defaultFollowUp,
-        lastActionTaken: 'Application registered in JanSetu Bihar portal'
+        lastActionTaken: 'Application registered in E-Sewak Tarapur portal',
+        createdById: req.user?.id,
+        createdByName: req.user?.name,
+        createdByEmail: req.user?.email
       },
       include: {
         district: true,
@@ -214,9 +221,7 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
       data: {
         applicationId: created.id,
         actionTaken: 'Initial Application Registration',
-        reminderNotes: isUnverifiedAc
-          ? `Application registered. Constituency '${finalCustomConstituency}' flagged for official delimitation review.`
-          : 'Application submitted and verified against Bihar Assembly Constituency database.',
+        reminderNotes: `Application submitted for ${blockName} Block (LGD ${blockLgdCode}), Tarapur Assembly Constituency, Munger.`,
         previousStatus: 'NEW',
         newStatus: applicationStatus,
         assignedTo: created.assignedEmployee,
@@ -231,7 +236,7 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
         applicationId: created.id,
         entityType: 'APPLICATION',
         action: 'CREATE',
-        details: `Application ${created.applicationId} registered for ${created.applicantName} (${created.verifiedAcCode} - ${(created as any).constituency?.name || created.customConstituency}). Category: "${created.categoryName}". Priority: ${created.priority}`,
+        details: `Application ${created.applicationId} registered by ${req.user?.email} for ${created.applicantName}, ${blockName} Block (LGD ${blockLgdCode}), Tarapur, Munger. Category: "${created.categoryName}". Priority: ${created.priority}`,
         performedBy: (req as any).user ? (req as any).user.email : 'Citizen / Intake Desk',
         ipAddress: req.ip
       }
@@ -260,6 +265,8 @@ router.get('/', async (req, res) => {
       priority,
       status,
       assignedEmployee,
+      blockName,
+      createdById,
       viewType,
       dateFrom,
       dateTo,
@@ -271,6 +278,15 @@ router.get('/', async (req, res) => {
 
     const where: any = {};
 
+    // Operators can only read their own intake records. Administrators may
+    // select an operator to review each operator's entries separately.
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user?.role === 'DATA_ENTRY') {
+      where.createdById = authReq.user.id;
+    } else if (createdById && authReq.user?.role === 'ADMIN') {
+      where.createdById = String(createdById);
+    }
+
     // Free text search
     if (search && typeof search === 'string' && search.trim().length > 0) {
       const q = search.trim();
@@ -281,7 +297,11 @@ router.get('/', async (req, res) => {
         { subject: { contains: q } },
         { verifiedAcCode: { contains: q } },
         { categoryName: { contains: q } },
-        { customConstituency: { contains: q } }
+        { customConstituency: { contains: q } },
+        { blockName: { contains: q } },
+        { blockLgdCode: { contains: q } },
+        { createdByName: { contains: q } },
+        { createdByEmail: { contains: q } }
       ];
     }
 
@@ -305,6 +325,9 @@ router.get('/', async (req, res) => {
     }
     if (assignedEmployee && typeof assignedEmployee === 'string') {
       where.assignedEmployee = { contains: assignedEmployee.trim() };
+    }
+    if (blockName && typeof blockName === 'string') {
+      where.blockName = blockName.trim();
     }
 
     // Date range
@@ -424,6 +447,11 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Application not found' });
     }
 
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user?.role === 'DATA_ENTRY' && application.createdById !== authReq.user.id) {
+      return res.status(403).json({ error: 'Operators can only access applications entered by their own account.' });
+    }
+
     const now = new Date();
     const daysSinceReceipt = Math.floor(
       (now.getTime() - new Date(application.dateReceived).getTime()) / (1000 * 60 * 60 * 24)
@@ -468,6 +496,10 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
 
     if (!existing) {
       return res.status(404).json({ error: 'Application record not found' });
+    }
+
+    if (userRole === 'DATA_ENTRY' && existing.createdById !== req.user?.id) {
+      return res.status(403).json({ error: 'Operators can only modify applications entered by their own account.' });
     }
 
     const {
@@ -626,9 +658,11 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
 // GET /api/applications/export/csv
 router.get('/export/csv', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { districtId, categoryId, category, priority, status, viewType, search } = req.query;
+    const { categoryId, category, priority, status, viewType, search, createdById, blockName } = req.query;
     const where: any = {};
-    if (districtId) where.districtId = parseInt(districtId as string);
+    if (req.user?.role === 'DATA_ENTRY') where.createdById = req.user.id;
+    else if (createdById && req.user?.role === 'ADMIN') where.createdById = String(createdById);
+    if (blockName && typeof blockName === 'string') where.blockName = blockName.trim();
     if (categoryId) where.categoryId = parseInt(categoryId as string);
     if (category && typeof category === 'string') {
       where.categoryName = { contains: category.trim() };
@@ -685,6 +719,10 @@ router.get('/export/csv', async (req: AuthenticatedRequest, res: Response) => {
       'District',
       'Assembly_Constituency',
       'Assembly_Code',
+      'Block',
+      'Block_LGD_Code',
+      'Entered_By',
+      'Operator_Email',
       'Category',
       'Priority',
       'Status',
@@ -701,6 +739,10 @@ router.get('/export/csv', async (req: AuthenticatedRequest, res: Response) => {
       sanitizeCsvValue(a.district.name),
       sanitizeCsvValue(a.constituency?.name || a.customConstituency || 'Unassigned'),
       sanitizeCsvValue(a.verifiedAcCode),
+      sanitizeCsvValue(a.blockName || ''),
+      sanitizeCsvValue(a.blockLgdCode || ''),
+      sanitizeCsvValue(a.createdByName || 'Legacy record'),
+      sanitizeCsvValue(a.createdByEmail || ''),
       sanitizeCsvValue(a.categoryName || a.category?.name || 'General'),
       sanitizeCsvValue(a.priority),
       sanitizeCsvValue(a.status),
@@ -711,7 +753,7 @@ router.get('/export/csv', async (req: AuthenticatedRequest, res: Response) => {
 
     const csvData = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="JanSetu_Bihar_Applications_Export.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="E_Sewak_Tarapur_Applications_Export.csv"');
     res.send(csvData);
   } catch (error: any) {
     res.status(500).json({ error: 'Error exporting CSV' });
@@ -721,6 +763,8 @@ router.get('/export/csv', async (req: AuthenticatedRequest, res: Response) => {
 // DELETE /api/applications/:id - Delete single application record
 router.delete('/:id', authenticateToken, requireWrite, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!(await verifyDestructiveActionPassword(req, res))) return;
+
     const id = req.params.id;
     if (!/^[a-f\d]{24}$/i.test(id)) {
       return res.status(400).json({ error: 'Invalid application ID' });
@@ -732,6 +776,10 @@ router.delete('/:id', authenticateToken, requireWrite, async (req: Authenticated
 
     if (!existing) {
       return res.status(404).json({ error: 'Application record not found' });
+    }
+
+    if (req.user?.role === 'DATA_ENTRY' && existing.createdById !== req.user.id) {
+      return res.status(403).json({ error: 'Operators can only delete applications entered by their own account.' });
     }
 
     // Delete associated follow-ups
@@ -788,8 +836,10 @@ router.delete('/:id', authenticateToken, requireWrite, async (req: Authenticated
 });
 
 // POST /api/applications/bulk-delete - Delete multiple application records
-router.post('/bulk-delete', authenticateToken, requireWrite, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/bulk-delete', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!(await verifyDestructiveActionPassword(req, res))) return;
+
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Please provide an array of application IDs to delete.' });
@@ -859,8 +909,10 @@ router.post('/bulk-delete', authenticateToken, requireWrite, async (req: Authent
 });
 
 // POST /api/applications/clear-all - Delete all application records from the database
-router.post('/clear-all', authenticateToken, requireWrite, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/clear-all', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!(await verifyDestructiveActionPassword(req, res))) return;
+
     // Delete all follow-ups first
     await database.followUp.deleteMany({});
 

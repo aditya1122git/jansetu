@@ -109,9 +109,7 @@ export const MasterDataModal: React.FC<MasterDataModalProps> = ({
         {/* Modal Header */}
         <div className="bg-[#1C4D8D] text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-[#C35504] flex items-center justify-center font-bold text-sm shadow">
-              05
-            </span>
+            <span className="w-9 h-9 rounded-xl bg-[#C35504] flex items-center justify-center shadow"><MapPin className="h-4 w-4" /></span>
             <div>
               <h3 className="text-lg font-bold">
                 {language === 'hi'

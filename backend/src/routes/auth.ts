@@ -1,8 +1,9 @@
-﻿import { database } from '../database';
+import { database } from '../database';
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import { JWT_SECRET, authenticateToken, requireAdmin, AuthenticatedRequest, revokeToken } from '../middleware/auth';
 
 const router = Router();
@@ -19,6 +20,23 @@ const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 // In-memory captcha store with TTL
 const captchaStore = new Map<string, { code: string; expiresAt: number }>();
+
+const createResetMailer = () => {
+  const user = process.env.SMTP_USER?.trim();
+  // Google displays App Passwords in groups; whitespace is not part of the credential.
+  const pass = process.env.SMTP_APP_PASSWORD?.replace(/\s/g, '');
+  if (!user || !pass) return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST?.trim() || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: true,
+    auth: { user, pass },
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
+    tls: { minVersion: 'TLSv1.2' }
+  });
+};
 
 function generateCaptchaSvg(code: string): string {
   const width = 160;
@@ -139,16 +157,6 @@ router.post('/login', async (req, res) => {
       }
       failedLoginAttempts.set(clientKey, current);
 
-      await database.auditLog.create({
-        data: {
-          entityType: 'USER',
-          action: 'LOGIN_FAILED',
-          details: `Failed authentication attempt for '${identifier}'. Reason: User not found or inactive. Attempt: ${current.count}`,
-          performedBy: identifier,
-          ipAddress: req.ip
-        }
-      }).catch(() => {});
-
       return res.status(401).json({ error: 'Invalid User ID or password. Please check your credentials.' });
     }
 
@@ -162,16 +170,6 @@ router.post('/login', async (req, res) => {
       }
       failedLoginAttempts.set(clientKey, current);
 
-      await database.auditLog.create({
-        data: {
-          entityType: 'USER',
-          action: 'LOGIN_FAILED',
-          details: `Failed authentication attempt for '${identifier}'. Reason: Invalid password. Attempt: ${current.count}`,
-          performedBy: identifier,
-          ipAddress: req.ip
-        }
-      }).catch(() => {});
-
       return res.status(401).json({ error: 'Invalid User ID or password. Please check your credentials.' });
     }
 
@@ -184,22 +182,13 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department
+        department: user.department,
+        blockName: user.blockName,
+        blockLgdCode: user.blockLgdCode
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
-
-    // Audit log
-    await database.auditLog.create({
-      data: {
-        entityType: 'USER',
-        action: 'LOGIN',
-        details: `User ${user.email} (${user.role}) authenticated successfully.`,
-        performedBy: user.email,
-        ipAddress: req.ip
-      }
-    });
 
     res.json({
       token,
@@ -209,7 +198,12 @@ router.post('/login', async (req, res) => {
         email: user.email,
         role: user.role,
         department: user.department,
-        phone: user.phone
+        phone: user.phone,
+        recoveryEmail: user.recoveryEmail,
+        districtName: user.districtName,
+        constituencyName: user.constituencyName,
+        blockName: user.blockName,
+        blockLgdCode: user.blockLgdCode
       }
     });
   } catch (error: any) {
@@ -229,23 +223,6 @@ router.post('/logout', async (req, res) => {
 
     if (token) {
       revokeToken(token);
-
-      try {
-        const decoded = jwt.decode(token) as any;
-        if (decoded && decoded.email) {
-          await database.auditLog.create({
-            data: {
-              entityType: 'USER',
-              action: 'LOGOUT',
-              details: `User ${decoded.email} (${decoded.role}) logged out. Server session invalidated.`,
-              performedBy: decoded.email,
-              ipAddress: req.ip
-            }
-          });
-        }
-      } catch (e) {
-        // Ignore token decoding failure during logout
-      }
     }
 
     res.json({
@@ -265,6 +242,11 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ error: 'Please provide your registered email address.' });
     }
 
+    const mailer = createResetMailer();
+    if (!mailer) {
+      return res.status(503).json({ error: 'Password reset email is not configured. Please contact the administrator.' });
+    }
+
     const user = await database.user.findUnique({
       where: { email: email.toLowerCase().trim() }
     });
@@ -273,20 +255,57 @@ router.post('/forgot-password', async (req, res) => {
       // Safe response to prevent account enumeration
       return res.json({
         success: true,
-        message: 'If the email is registered in JanSetu Bihar, a password reset token has been generated.'
+        message: 'If this email is registered, a password reset link has been sent.'
       });
     }
 
-    const token = crypto.randomBytes(24).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    const configuredBaseUrl = process.env.APP_BASE_URL?.trim().replace(/\/+$/, '');
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || req.protocol).split(',')[0].trim();
+    const appBaseUrl = configuredBaseUrl || `${forwardedProto}://${req.get('host')}`;
+    const resetUrl = `${appBaseUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+    const destinationEmail = user.role === 'ADMIN' && user.recoveryEmail
+      ? String(user.recoveryEmail).trim().toLowerCase()
+      : user.email;
 
+    await database.passwordResetToken.deleteMany({ where: { email: user.email } });
     await database.passwordResetToken.create({
       data: {
         email: user.email,
-        token,
+        token: tokenHash,
         expiresAt
       }
     });
+
+    try {
+      await mailer.sendMail({
+        from: process.env.SMTP_FROM?.trim() || `E-Sewak Tarapur <${process.env.SMTP_USER}>`,
+        to: destinationEmail,
+        subject: 'Reset your E-Sewak Tarapur password',
+        text: `Hello ${user.name},\n\nOpen this secure link to create a new password:\n${resetUrl}\n\nThis one-time link expires in 30 minutes. If you did not request this, you can ignore this email.`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#172033"><h2 style="color:#1c4d8d">E-Sewak Tarapur</h2><p>Hello ${String(user.name).replace(/[<>&"']/g, '')},</p><p>Use the secure button below to create a new password.</p><p style="margin:28px 0"><a href="${resetUrl}" style="display:inline-block;padding:13px 22px;border-radius:10px;background:#1c4d8d;color:#fff;text-decoration:none;font-weight:700">Create New Password</a></p><p style="color:#64748b">This one-time link expires in 30 minutes and becomes invalid immediately after your password is changed.</p><p style="color:#64748b">If you did not request this, ignore this email.</p></div>`
+      });
+    } catch (mailError) {
+      await database.passwordResetToken.deleteMany({ where: { email: user.email } });
+      const smtpError = mailError as { code?: string; command?: string; responseCode?: number; message?: string };
+      console.error('Password reset email delivery failed:', {
+        code: smtpError.code,
+        command: smtpError.command,
+        responseCode: smtpError.responseCode,
+        message: smtpError.message
+      });
+      const isAuthError = smtpError.code === 'EAUTH' || smtpError.responseCode === 535;
+      const isConnectionTimeout = smtpError.code === 'ETIMEDOUT' || smtpError.code === 'ECONNECTION';
+      return res.status(502).json({
+        error: isAuthError
+          ? 'Google SMTP authentication failed. Check SMTP_USER and the 16-character Google App Password.'
+          : isConnectionTimeout
+            ? 'Could not connect to smtp.gmail.com:465. Allow outbound SMTP port 465 on the server/firewall and try again.'
+            : 'Reset email could not be sent through smtp.gmail.com:465. Please try again later.'
+      });
+    }
 
     await database.auditLog.create({
       data: {
@@ -300,12 +319,27 @@ router.post('/forgot-password', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Password reset link/token generated successfully.',
-      resetToken: token,
-      expiresAt: expiresAt.toISOString()
+      message: 'If this email is registered, a password reset link has been sent.'
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to initiate password reset' });
+  }
+});
+
+// GET /api/auth/reset-password/:token/validate
+router.get('/reset-password/:token/validate', async (req, res) => {
+  try {
+    const rawToken = String(req.params.token || '').trim();
+    if (!rawToken) return res.status(400).json({ error: 'Password reset link is invalid.' });
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const resetRecord = await database.passwordResetToken.findUnique({ where: { token: tokenHash } });
+    if (!resetRecord || resetRecord.expiresAt < new Date()) {
+      if (resetRecord) await database.passwordResetToken.deleteMany({ where: { email: resetRecord.email } });
+      return res.status(400).json({ error: 'This password reset link is invalid or has expired.' });
+    }
+    res.json({ valid: true });
+  } catch {
+    res.status(500).json({ error: 'Unable to validate password reset link.' });
   }
 });
 
@@ -317,29 +351,28 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Reset token and new password are required.' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters long.' });
     }
 
+    const tokenHash = crypto.createHash('sha256').update(String(token).trim()).digest('hex');
     const resetRecord = await database.passwordResetToken.findUnique({
-      where: { token }
+      where: { token: tokenHash }
     });
 
     if (!resetRecord || resetRecord.expiresAt < new Date()) {
       return res.status(400).json({ error: 'Invalid or expired password reset token.' });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     await database.user.update({
       where: { email: resetRecord.email },
       data: { password: hashedPassword }
     });
 
-    // Remove token once used
-    await database.passwordResetToken.delete({
-      where: { id: resetRecord.id }
-    });
+    // Invalidate this link and every other outstanding link for the account.
+    await database.passwordResetToken.deleteMany({ where: { email: resetRecord.email } });
 
     await database.auditLog.create({
       data: {
@@ -394,17 +427,6 @@ router.post('/demo-switch', async (req, res) => {
     failedLoginAttempts.delete(`${req.ip}_${user.email.toLowerCase()}`);
     failedLoginAttempts.delete(`${req.ip}_${user.email.split('@')[0].toLowerCase()}`);
 
-    // Audit log
-    await database.auditLog.create({
-      data: {
-        entityType: 'USER',
-        action: 'LOGIN',
-        details: `Role switch authentication for ${user.email} (${user.role})`,
-        performedBy: user.email,
-        ipAddress: req.ip
-      }
-    }).catch(() => {});
-
     res.json({
       token,
       user: {
@@ -427,7 +449,7 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const user = await database.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, name: true, email: true, role: true, department: true, phone: true, isActive: true, createdAt: true }
+      select: { id: true, name: true, email: true, recoveryEmail: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true, createdAt: true }
     });
     res.json({ user });
   } catch (error: any) {
@@ -435,14 +457,94 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
   }
 });
 
+// PUT /api/auth/profile - Update the signed-in administrator profile
+router.put('/profile', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const recoveryEmail = String(req.body?.recoveryEmail || '').trim().toLowerCase();
+    const phone = String(req.body?.phone || '').trim();
+
+    if (!name || !/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ error: 'A valid name and email address are required.' });
+    }
+    if (phone && !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({ error: 'Phone number must contain exactly 10 digits.' });
+    }
+    if (!/^\S+@\S+\.\S+$/.test(recoveryEmail)) {
+      return res.status(400).json({ error: 'A valid password reset email address is required.' });
+    }
+
+    const emailOwner = await database.user.findUnique({ where: { email } });
+    if (emailOwner && emailOwner.id !== req.user?.id) {
+      return res.status(400).json({ error: 'This email address is already used by another account.' });
+    }
+
+    const updated = await database.user.update({
+      where: { id: req.user!.id },
+      data: { name, email, recoveryEmail, phone: phone || null },
+      select: { id: true, name: true, email: true, recoveryEmail: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true }
+    });
+
+    const token = jwt.sign({
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      role: updated.role,
+      department: updated.department,
+      blockName: updated.blockName,
+      blockLgdCode: updated.blockLgdCode
+    }, JWT_SECRET, { expiresIn: '24h' });
+
+    res.json({ success: true, message: 'Admin profile updated successfully.', user: updated, token });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to update admin profile.' });
+  }
+});
+
+// PUT /api/auth/change-password - Secure password change for signed-in administrator
+router.put('/change-password', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'Current password, new password and confirmation are required.' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must contain at least 8 characters.' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'New password and confirmation do not match.' });
+    }
+
+    const user = await database.user.findUnique({ where: { id: req.user!.id } });
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(403).json({ error: 'Current password is incorrect.' });
+    }
+
+    await database.user.update({
+      where: { id: req.user!.id },
+      data: { password: await bcrypt.hash(newPassword, 12) }
+    });
+
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to change password.' });
+  }
+});
+
 // GET /api/auth/users (Admin only)
 router.get('/users', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const users = await database.user.findMany({
-      select: { id: true, name: true, email: true, role: true, department: true, phone: true, isActive: true, createdAt: true },
+      where: { role: 'DATA_ENTRY' },
+      select: { id: true, name: true, email: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true, createdAt: true },
       orderBy: { id: 'asc' }
     });
-    res.json({ users });
+    const usersWithCounts = await Promise.all(users.map(async (user: any) => ({
+      ...user,
+      _count: { applications: await database.application.count({ where: { createdById: user.id } }) }
+    })));
+    res.json({ users: usersWithCounts });
   } catch (error: any) {
     res.status(500).json({ error: 'Error fetching user list' });
   }
@@ -451,9 +553,27 @@ router.get('/users', authenticateToken, requireAdmin, async (req: AuthenticatedR
 // POST /api/auth/users (Admin only)
 router.post('/users', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { name, email, password, role, department, phone } = req.body;
-    if (!name || !email || !password || !role) {
+    const { name, email, password, confirmPassword, role, department, phone, blockName, blockLgdCode } = req.body;
+    if (!name || !email || !password || !role || !phone) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (!['ADMIN', 'DATA_ENTRY', 'REVIEWER', 'READONLY'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid user role.' });
+    }
+    if (!/^\d{10}$/.test(String(phone).trim())) {
+      return res.status(400).json({ error: 'A valid 10-digit phone number is required.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must contain at least 8 characters.' });
+    }
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      return res.status(400).json({ error: 'Password and confirm password do not match.' });
+    }
+
+    const tarapurBlocks: Record<string, string> = { Asarganj: '2451', Sangrampur: '2457', Tarapur: '2458' };
+    if (role === 'DATA_ENTRY' && (!blockName || tarapurBlocks[blockName] !== String(blockLgdCode))) {
+      return res.status(400).json({ error: 'Select a valid Tarapur block and LGD code.' });
     }
 
     const existing = await database.user.findUnique({ where: { email: email.toLowerCase().trim() } });
@@ -468,10 +588,14 @@ router.post('/users', authenticateToken, requireAdmin, async (req: Authenticated
         email: email.toLowerCase().trim(),
         password: passwordHash,
         role,
-        department: department || 'General Administration',
-        phone: phone || null
+        department: department || (role === 'DATA_ENTRY' ? `${blockName} Operator` : 'General Administration'),
+        phone: String(phone).trim(),
+        districtName: role === 'DATA_ENTRY' ? 'Munger' : null,
+        constituencyName: role === 'DATA_ENTRY' ? 'Tarapur' : null,
+        blockName: role === 'DATA_ENTRY' ? blockName : null,
+        blockLgdCode: role === 'DATA_ENTRY' ? String(blockLgdCode) : null
       },
-      select: { id: true, name: true, email: true, role: true, department: true, phone: true, isActive: true }
+      select: { id: true, name: true, email: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true }
     });
 
     await database.auditLog.create({
@@ -490,16 +614,74 @@ router.post('/users', authenticateToken, requireAdmin, async (req: Authenticated
   }
 });
 
-// GET /api/auth/audit-logs (Admin only)
-router.get('/audit-logs', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+// PUT /api/auth/users/:id/block - Assign an operator to one verified Tarapur block.
+router.put('/users/:id/block', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const logs = await database.auditLog.findMany({
-      take: 100,
-      orderBy: { createdAt: 'desc' }
+    const blockName = String(req.body?.blockName || '');
+    const tarapurBlocks: Record<string, string> = { Asarganj: '2451', Sangrampur: '2457', Tarapur: '2458' };
+    if (!tarapurBlocks[blockName]) {
+      return res.status(400).json({ error: 'Select a valid Tarapur block.' });
+    }
+
+    const operator = await database.user.findUnique({ where: { id: req.params.id } });
+    if (!operator || operator.role !== 'DATA_ENTRY') {
+      return res.status(404).json({ error: 'Operator account not found.' });
+    }
+
+    const updated = await database.user.update({
+      where: { id: operator.id },
+      data: {
+        districtName: 'Munger',
+        constituencyName: 'Tarapur',
+        blockName,
+        blockLgdCode: tarapurBlocks[blockName],
+        department: `${blockName} Operator`
+      },
+      select: { id: true, name: true, email: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true }
     });
-    res.json({ logs });
+
+    res.json({ success: true, message: `${updated.name} is now mapped to ${blockName} block.`, user: updated });
   } catch (error: any) {
-    res.status(500).json({ error: 'Error fetching audit logs' });
+    res.status(500).json({ error: 'Failed to update operator block mapping.' });
+  }
+});
+
+// DELETE /api/auth/users/:id - Permanently remove an operator account.
+// Existing applications retain their creator snapshot for historical reporting.
+router.delete('/users/:id', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const password = String(req.body?.password || '');
+    if (!password) {
+      return res.status(400).json({ error: 'Enter your admin password to delete this operator account.' });
+    }
+
+    const admin = await database.user.findUnique({ where: { id: req.user!.id } });
+    if (!admin || !(await bcrypt.compare(password, admin.password))) {
+      return res.status(403).json({ error: 'Incorrect admin password. The operator account was not deleted.' });
+    }
+
+    const target = await database.user.findUnique({ where: { id: req.params.id } });
+    if (!target) return res.status(404).json({ error: 'Operator account not found.' });
+    if (target.role !== 'DATA_ENTRY') {
+      return res.status(403).json({ error: 'Only operator accounts can be deleted from this section.' });
+    }
+
+    await database.passwordResetToken.deleteMany({ where: { email: target.email } });
+    await database.user.delete({ where: { id: target.id } });
+
+    await database.auditLog.create({
+      data: {
+        entityType: 'USER',
+        action: 'DELETE',
+        details: `Deleted operator account ${target.email} mapped to ${target.blockName || 'unassigned'} block. Existing application records were preserved.`,
+        performedBy: req.user?.email || 'admin',
+        ipAddress: req.ip
+      }
+    }).catch(() => {});
+
+    res.json({ success: true, message: `Operator ${target.name} was deleted successfully.` });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to delete operator account.' });
   }
 });
 

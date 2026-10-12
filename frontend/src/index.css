@@ -90,18 +90,6 @@ a {
   border-color: #C35504;
 }
 
-.bg-number {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  font-size: 4.5rem;
-  font-weight: 900;
-  color: #f1f1f1;
-  line-height: 1;
-  z-index: 0;
-  user-select: none;
-}
-
 .icon-box {
   background: linear-gradient(135deg, #ea6b1d, #b84308);
   width: 68px;

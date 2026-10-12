@@ -25,10 +25,10 @@ const slides: LoginSlideItem[] = [
       en: 'Shri Samrat Choudhary'
     },
     subtitle: {
-      hi: 'JanSetu Bihar — जनता की बात, समाधान के साथ। जन-समस्याओं के त्वरित एवं पारदर्शी समाधान हेतु संकल्पित सुशासन।',
-      en: 'JanSetu Bihar — Transparent & Responsive Governance dedicated to efficient application management.'
+      hi: 'E-Sewak Tarapur — जनता की बात, समाधान के साथ। जन-समस्याओं के त्वरित एवं पारदर्शी समाधान हेतु संकल्पित सुशासन।',
+      en: 'E-Sewak Tarapur — Transparent & Responsive Governance dedicated to efficient application management.'
     },
-    alt: 'CM Samrat Choudhary - JanSetu Bihar Portal',
+    alt: 'CM Samrat Choudhary - E-Sewak Tarapur Portal',
     imagePosition: 'object-center'
   },
   {
@@ -44,9 +44,9 @@ const slides: LoginSlideItem[] = [
     },
     subtitle: {
       hi: 'प्रत्येक नागरिक आवेदन की त्रिस्तरीय निगरानी, पारदर्शी समीक्षा एवं समयबद्ध निस्तारण प्रणाली।',
-      en: 'JanSetu Bihar — Citizen Grievance Redressal: End-to-end multi-tier tracking from intake to verified resolution.'
+      en: 'E-Sewak Tarapur — Citizen Grievance Redressal: End-to-end multi-tier tracking from intake to verified resolution.'
     },
-    alt: 'JanSetu Bihar Citizen Grievance Redressal Banner',
+    alt: 'E-Sewak Tarapur Citizen Grievance Redressal Banner',
     imagePosition: 'object-center'
   },
   {
@@ -82,7 +82,7 @@ const slides: LoginSlideItem[] = [
       hi: 'बिहार के समग्र विकास, पारदर्शी समीक्षा एवं जनकल्याणकारी योजनाओं का तीव्र क्रियान्वयन।',
       en: 'Accelerating Bihar’s holistic growth with transparent reviews and rapid execution of public welfare initiatives.'
     },
-    alt: 'सम्राट की हुंकार, विकास को मिली रफ़्तार - JanSetu Bihar',
+    alt: 'सम्राट की हुंकार, विकास को मिली रफ़्तार - E-Sewak Tarapur',
     imagePosition: 'object-center'
   },
   {
@@ -100,7 +100,7 @@ const slides: LoginSlideItem[] = [
       hi: 'जनता की बात, समाधान के साथ — पारदर्शी सुशासन, समयबद्ध निस्तारण एवं सशक्त बिहार।',
       en: 'Responsive governance dedicated to transparent, verified, and time-bound grievance redressal.'
     },
-    alt: 'सम्राट का संकल्प, बिहार का विकल्प - JanSetu Bihar',
+    alt: 'सम्राट का संकल्प, बिहार का विकल्प - E-Sewak Tarapur',
     imagePosition: 'object-center'
   }
 ];
@@ -175,7 +175,7 @@ export const LoginSlider: React.FC<LoginSliderProps> = ({ language }) => {
       ref={sliderRef}
       role="region"
       aria-roledescription="carousel"
-      aria-label="JanSetu Bihar Government Portal Sliding Image Banner"
+      aria-label="E-Sewak Tarapur Government Portal Sliding Image Banner"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onMouseEnter={() => setIsPaused(true)}

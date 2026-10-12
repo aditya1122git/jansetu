@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, Upload, AlertTriangle, FileText, Check, Paperclip, Trash2, HelpCircle, Eye, ExternalLink, Image as ImageIcon, Download } from './icons';
 import { api } from '../services/api';
-import { District, AssemblyConstituency, ComplaintCategory, Application, SystemSettings } from '../types';
+import { ComplaintCategory, Application, SystemSettings, User } from '../types';
+
+const TARAPUR_BLOCKS = [
+  { name: 'Tarapur', lgdCode: '2458' },
+  { name: 'Sangrampur', lgdCode: '2457' },
+  { name: 'Asarganj', lgdCode: '2451' }
+] as const;
 
 interface ApplicationFormModalProps {
   isOpen: boolean;
@@ -10,6 +16,7 @@ interface ApplicationFormModalProps {
   onApplicationCreated: (app: Application) => void;
   language: 'hi' | 'en';
   settings?: SystemSettings | null;
+  currentUser?: User | null;
 }
 
 export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
@@ -18,10 +25,9 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
   pageMode = false,
   onApplicationCreated,
   language,
-  settings: initialSettings
+  settings: initialSettings,
+  currentUser
 }) => {
-  const [districts, setDistricts] = useState<District[]>([]);
-  const [constituencies, setConstituencies] = useState<AssemblyConstituency[]>([]);
   const [categories, setCategories] = useState<ComplaintCategory[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(initialSettings || null);
 
@@ -31,14 +37,8 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
   const [mobileNumber, setMobileNumber] = useState('');
   const [alternateMobile, setAlternateMobile] = useState('');
   const [address, setAddress] = useState('');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<number | ''>('');
-  
-  // Constituency Selection & Manual Entry
-  const [selectedConstituencyId, setSelectedConstituencyId] = useState<number | ''>('');
-  const [manualConstituencyName, setManualConstituencyName] = useState('');
-  const [isManualAcEntry, setIsManualAcEntry] = useState(false);
-  const [isUnmatchedAc, setIsUnmatchedAc] = useState(false);
-  const [verifiedAcCode, setVerifiedAcCode] = useState('');
+  const [selectedBlockName, setSelectedBlockName] = useState<string>('');
+  const selectedBlock = TARAPUR_BLOCKS.find(block => block.name === selectedBlockName);
 
   // Complaint Category (Manual Text Entry)
   const [categoryName, setCategoryName] = useState('');
@@ -65,8 +65,11 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadInitialData();
+      if (currentUser?.blockName && TARAPUR_BLOCKS.some(block => block.name === currentUser.blockName)) {
+        setSelectedBlockName(currentUser.blockName);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, currentUser?.blockName]);
 
   useEffect(() => {
     if (initialSettings) {
@@ -76,73 +79,16 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
 
   const loadInitialData = async () => {
     try {
-      const [distRes, catRes, setRes] = await Promise.all([
-        api.getDistricts(),
+      const [catRes, setRes] = await Promise.all([
         api.getCategories(),
         api.getSettings().catch(() => ({ settings: null }))
       ]);
-      setDistricts(distRes.districts);
       setCategories(catRes.categories);
       if (setRes?.settings) {
         setSettings(setRes.settings);
       }
     } catch (e: any) {
-      setErrorMsg('Failed to load districts and categories.');
-    }
-  };
-
-  // When District changes, load mapped Assembly Constituencies
-  const handleDistrictChange = async (distId: number) => {
-    setSelectedDistrictId(distId);
-    setSelectedConstituencyId('');
-    setManualConstituencyName('');
-    setVerifiedAcCode('');
-    setIsUnmatchedAc(false);
-    try {
-      const res = await api.getConstituencies(distId);
-      setConstituencies(res.constituencies);
-    } catch (e) {
-      setConstituencies([]);
-    }
-  };
-
-  // When Constituency selected from Master Dropdown
-  const handleConstituencySelect = (acId: number) => {
-    setSelectedConstituencyId(acId);
-    const found = constituencies.find(c => c.id === acId);
-    if (found) {
-      setVerifiedAcCode(`${String(found.acNumber).padStart(3, '0')} · ${found.acCode}`);
-      setManualConstituencyName(found.name);
-      setIsUnmatchedAc(false);
-    } else {
-      setVerifiedAcCode('');
-      setManualConstituencyName('');
-      setIsUnmatchedAc(false);
-    }
-  };
-
-  // When Constituency entered manually
-  const handleManualConstituencyInput = (text: string) => {
-    setManualConstituencyName(text);
-    const trimmed = text.trim().toLowerCase();
-    if (!trimmed) {
-      setSelectedConstituencyId('');
-      setVerifiedAcCode('');
-      setIsUnmatchedAc(false);
-      return;
-    }
-
-    // Check if matches a verified constituency in the current district
-    const matched = constituencies.find(c => c.name.toLowerCase() === trimmed);
-    if (matched) {
-      setSelectedConstituencyId(matched.id);
-      setVerifiedAcCode(`${String(matched.acNumber).padStart(3, '0')} · ${matched.acCode}`);
-      setIsUnmatchedAc(false);
-    } else {
-      // Flag unmatched manual entry for administrative review
-      setSelectedConstituencyId('');
-      setVerifiedAcCode('UNVERIFIED');
-      setIsUnmatchedAc(true);
+      setErrorMsg('Failed to load application form data.');
     }
   };
 
@@ -209,14 +155,8 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
       setErrorMsg(language === 'hi' ? 'कृपया मान्य 10 अंकों का मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
       return;
     }
-    if (!selectedDistrictId) {
-      setErrorMsg(language === 'hi' ? 'कृपया जिला चुनें।' : 'Please select a district.');
-      return;
-    }
-
-    // Assembly Constituency is Mandatory
-    if (!selectedConstituencyId && !manualConstituencyName.trim()) {
-      setErrorMsg('Please enter or select Assembly Constituency.');
+    if (!selectedBlock) {
+      setErrorMsg(language === 'hi' ? 'कृपया प्रखंड चुनें।' : 'Please select a block.');
       return;
     }
 
@@ -242,9 +182,11 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
         mobileNumber: mobileNumber.trim(),
         alternateMobile: alternateMobile ? alternateMobile.trim() : null,
         address: address.trim(),
-        districtId: selectedDistrictId,
-        constituencyId: selectedConstituencyId || undefined,
-        constituencyName: manualConstituencyName.trim() || undefined,
+        districtId: 24,
+        constituencyId: 164,
+        constituencyName: 'Tarapur',
+        blockName: selectedBlock.name,
+        blockLgdCode: selectedBlock.lgdCode,
         categoryName: categoryName.trim(),
         subject: subject.trim(),
         description: description.trim(),
@@ -270,12 +212,7 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
     setMobileNumber('');
     setAlternateMobile('');
     setAddress('');
-    setSelectedDistrictId('');
-    setSelectedConstituencyId('');
-    setManualConstituencyName('');
-    setIsManualAcEntry(false);
-    setIsUnmatchedAc(false);
-    setVerifiedAcCode('');
+    setSelectedBlockName(currentUser?.blockName || '');
     setCategoryName('');
     setSubject('');
     setDescription('');
@@ -297,17 +234,15 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
         {/* Modal Header */}
         <div className="bg-[#1C4D8D] text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-[#C35504] flex items-center justify-center font-bold text-sm shadow">
-              01
-            </span>
+            <span className="w-9 h-9 rounded-xl bg-[#C35504] flex items-center justify-center shadow"><FileText className="h-4 w-4" /></span>
             <div>
               <h3 className="text-lg font-bold">
-                {language === 'hi' ? 'नया आवेदन / शिकायत पंजीकरण' : 'Section 1 — New Application / Complaint Entry'}
+                {language === 'hi' ? 'नया आवेदन / शिकायत पंजीकरण' : 'New Application / Complaint Entry'}
               </h3>
               <p className="text-xs text-blue-200">
                 {language === 'hi'
-                  ? '38 जिले व 243 निर्वाचन क्षेत्र आधारित आधिकारिक प्रविष्टि प्रपत्र'
-                  : 'Official Intake Form with Verified Bihar AC Mapping'}
+                  ? 'मुंगेर जिला, तारापुर विधानसभा और सत्यापित प्रखंड आधारित प्रविष्टि प्रपत्र'
+                  : 'Official intake form for Munger District and Tarapur Assembly Constituency'}
               </p>
             </div>
           </div>
@@ -354,6 +289,9 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
                     <strong>Constituency:</strong> {successApp.constituency?.name || successApp.customConstituency || 'Unassigned'} ({successApp.verifiedAcCode})
                   </div>
                   <div>
+                    <strong>Block:</strong> {successApp.blockName || '—'} (LGD {successApp.blockLgdCode || '—'})
+                  </div>
+                  <div>
                     <strong>Category:</strong> <span className="font-bold text-[#1C4D8D]">{successApp.categoryName || successApp.category?.name}</span>
                   </div>
                   <div>
@@ -397,7 +335,7 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
               <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
                 <h4 className="text-sm font-bold text-[#1C4D8D] uppercase tracking-wider mb-3 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#C35504]" />
-                  1. Applicant Details & Receipt Info
+                  Applicant Details & Receipt Information
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -471,125 +409,50 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
                 </div>
               </div>
 
-              {/* Step 2: Bihar Delimitation Mapping (Assembly Constituency is Mandatory) */}
+              {/* Step 2: Fixed Tarapur service-area mapping */}
               <div className="border border-blue-200 rounded-xl p-4 bg-blue-50/40">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-bold text-[#1C4D8D] uppercase tracking-wider">
-                    2. Bihar Assembly Constituency Mapping
+                    Service Area & Block Mapping
                   </h4>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsManualAcEntry(!isManualAcEntry);
-                        if (!isManualAcEntry) {
-                          setManualConstituencyName('');
-                          setVerifiedAcCode('');
-                        }
-                      }}
-                      className="text-[11px] text-[#1C4D8D] underline hover:text-[#C35504] font-medium"
-                    >
-                      {isManualAcEntry ? 'Switch to Master Dropdown' : 'Manual Entry / Unlisted Area'}
-                    </button>
-                    <span className="text-[11px] bg-blue-100 text-[#1C4D8D] px-2 py-0.5 rounded font-normal">
-                      38 Districts & 243 ACs
-                    </span>
-                  </div>
+                  <span className="text-[11px] bg-blue-100 text-[#1C4D8D] px-2 py-0.5 rounded font-semibold">
+                    Munger · Tarapur
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      District (Select from 38) <span className="text-red-500 font-bold">*</span>
+                      District
                     </label>
-                    <select
-                      value={selectedDistrictId}
-                      onChange={(e) => handleDistrictChange(Number(e.target.value))}
-                      required
-                      className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#1C4D8D] outline-none"
-                    >
-                      <option value="">-- Select District --</option>
-                      {districts.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name} ({d.code})
-                        </option>
-                      ))}
+                    <input value="Munger" readOnly className="w-full text-sm font-bold border border-green-300 rounded-lg px-3 py-2 bg-green-50 text-green-900 outline-none" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Assembly Constituency
+                    </label>
+                    <input value="Tarapur (AC 164)" readOnly className="w-full text-sm font-bold border border-green-300 rounded-lg px-3 py-2 bg-green-50 text-green-900 outline-none" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Block <span className="text-red-500 font-bold">*</span>
+                    </label>
+                    <select value={selectedBlockName} onChange={(event) => setSelectedBlockName(event.target.value)} required disabled={currentUser?.role === 'DATA_ENTRY'} className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#1C4D8D] outline-none disabled:cursor-not-allowed disabled:bg-blue-50 disabled:font-bold disabled:text-blue-900">
+                      <option value="">-- Select Block --</option>
+                      {TARAPUR_BLOCKS.map(block => <option key={block.name} value={block.name}>{block.name}</option>)}
                     </select>
-                  </div>
-
-                  {/* Assembly Constituency * - Required Field */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Assembly Constituency <span className="text-red-500 font-bold text-sm">*</span>
-                    </label>
-
-                    {!isManualAcEntry ? (
-                      <select
-                        value={selectedConstituencyId}
-                        onChange={(e) => handleConstituencySelect(Number(e.target.value))}
-                        disabled={!selectedDistrictId}
-                        required
-                        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#1C4D8D] outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      >
-                        <option value="">
-                          {selectedDistrictId ? '-- Select Constituency --' : 'First select district'}
-                        </option>
-                        {constituencies.map((ac) => (
-                          <option key={ac.id} value={ac.id}>
-                            {ac.acNumber}. {ac.name} {ac.reservation !== 'GEN' ? `(${ac.reservation})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        list="master-constituency-list"
-                        placeholder="Type constituency name"
-                        value={manualConstituencyName}
-                        onChange={(e) => handleManualConstituencyInput(e.target.value)}
-                        required
-                        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#1C4D8D] outline-none"
-                      />
-                    )}
-
-                    <datalist id="master-constituency-list">
-                      {constituencies.map((ac) => (
-                        <option key={ac.id} value={ac.name}>
-                          {ac.acCode} - {ac.name}
-                        </option>
-                      ))}
-                    </datalist>
-
-                    {isUnmatchedAc && (
-                      <p className="text-[11px] text-amber-700 font-semibold mt-1">
-                        ⚠️ Unmatched name: Flagged for administrative verification
-                      </p>
-                    )}
+                    {currentUser?.role === 'DATA_ENTRY' && <p className="mt-1 text-[10px] font-semibold text-blue-700">Assigned by administrator</p>}
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Verified AC No. / Code
+                      LGD / Block Panchayat Code
                     </label>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={verifiedAcCode}
-                        readOnly
-                        placeholder="AC number appears automatically"
-                        className={`w-full text-sm border font-bold rounded-lg px-3 py-2 outline-none font-mono ${
-                          isUnmatchedAc
-                            ? 'border-amber-400 bg-amber-50 text-amber-800'
-                            : verifiedAcCode
-                            ? 'border-green-300 bg-green-50 text-green-800'
-                            : 'border-gray-200 bg-gray-50 text-gray-500'
-                        }`}
-                      />
-                      {verifiedAcCode && !isUnmatchedAc && (
-                        <span className="text-green-600 bg-green-100 p-1.5 rounded-lg" title="Verified against official ECI/Assembly Master">
-                          <Check className="w-4 h-4" />
-                        </span>
-                      )}
+                      <input value={selectedBlock?.lgdCode || ''} readOnly placeholder="Auto-filled" className="w-full text-sm font-bold font-mono border border-green-300 rounded-lg px-3 py-2 bg-green-50 text-green-900 outline-none" />
+                      {selectedBlock && <span className="text-green-600 bg-green-100 p-1.5 rounded-lg" title="Verified LGD code"><Check className="w-4 h-4" /></span>}
                     </div>
                   </div>
                 </div>
@@ -598,7 +461,7 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
               {/* Step 3: Complaint Classification & Details (Manual Editable Complaint Category) */}
               <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
                 <h4 className="text-sm font-bold text-[#1C4D8D] uppercase tracking-wider mb-3">
-                  3. Complaint Details & Priority Classification
+                  Complaint Details & Priority Classification
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   {/* Complaint Category * - Manual Text Entry */}
@@ -703,7 +566,7 @@ export const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
               {/* Step 4: Assignment, Supporting Documents & Internal Remarks */}
               <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
                 <h4 className="text-sm font-bold text-[#1C4D8D] uppercase tracking-wider mb-3">
-                  4. Assignment, Attachments & Internal Remarks
+                  Assignment, Attachments & Internal Remarks
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>

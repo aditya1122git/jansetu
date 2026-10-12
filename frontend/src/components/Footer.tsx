@@ -22,7 +22,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSection, language }) => {
             <p className="text-blue-100/90 text-xs sm:text-sm leading-relaxed max-w-xl text-justify sm:text-left">
               {language === 'hi'
                 ? 'आवेदन प्रबंधन, रिकॉर्ड ट्रैकिंग और व्यवस्थित फॉलो-अप के लिए एक एकीकृत प्लेटफॉर्म।'
-                : 'An integrated workspace engineered for transparent intake, priority classification, and progress oversight across all 38 Districts & 243 Assembly Constituencies.'}
+                : 'An integrated workspace for transparent intake, priority classification, and progress oversight across Tarapur Assembly Constituency in Munger.'}
             </p>
             {language === 'hi' && (
               <div className="flex items-center gap-2 text-xs text-amber-300/90 font-medium">
@@ -83,7 +83,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSection, language }) => {
         {/* Minimal Copyright Line & Independent Status */}
         <div className="border-t border-blue-900/80 pt-5 text-center text-xs text-blue-200/90 space-y-1">
           <div>
-            &copy; {new Date().getFullYear()} JanSetu Bihar — Application & Grievance Management Portal. All rights reserved.
+            &copy; {new Date().getFullYear()} E-Sewak Tarapur — Application & Grievance Management Portal. All rights reserved.
           </div>
           <div className="text-[11px] text-blue-300/70">
             Independent Application Management Platform • Secure Multi-Tier Access • 200 MB Document Repository

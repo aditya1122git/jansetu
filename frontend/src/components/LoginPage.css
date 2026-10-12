@@ -12,10 +12,7 @@
     #f4f7fb;
 }
 
-.login-slider-section { width: 100%; background: #071426; }
-.login-slider-section .login-slider { border-bottom: 0; box-shadow: 0 18px 45px rgba(7,20,38,.18); }
-.login-slider-section .login-slider > div:first-child { height: clamp(330px, 38vw, 490px); }
-.login-stage { flex: 1; display: grid; place-items: center; padding-block: 46px 56px; }
+.login-stage { flex: 1; min-height: calc(100vh - 190px); display: grid; place-items: center; padding-block: 46px 56px; }
 .login-shell { width: min(100%, 680px); min-height: auto; overflow: hidden; border: 1px solid rgba(148,163,184,.22); border-radius: 24px; background: #fff; box-shadow: 0 24px 65px rgba(15,23,42,.12); }
 .login-visual { position: relative; overflow: hidden; color: #fff; background: linear-gradient(150deg, #071426, #0c3159 60%, #185b8b); }
 .login-visual::before, .login-visual::after { display: none; }
@@ -36,7 +33,7 @@
 .login-form .form-label { margin: 17px 0 8px; color: #26364d; font-size: .8rem; font-weight: 700; }
 .login-input-group { min-height: 54px; display: flex; align-items: center; gap: 11px; padding: 0 15px; border: 1px solid #dbe3ed; border-radius: 13px; background: #fbfcfe; transition: border-color .2s, box-shadow .2s, background .2s; }
 .login-input-group:focus-within { border-color: #3b82b8; background: #fff; box-shadow: 0 0 0 4px rgba(22,78,134,.1); }
-.login-input-group > i { width: 18px; flex: 0 0 18px; color: #91a0b4; text-align: center; }
+.login-input-group > span { width: 18px; flex: 0 0 18px; color: #91a0b4; text-align: center; }
 .login-input-group .form-control,
 .login-input-group .form-control:focus { min-width: 0; height: 50px; padding: 0; border: 0 !important; outline: 0 !important; background: transparent !important; box-shadow: none !important; color: #172033; font-size: .88rem; }
 .login-input-group .form-control::placeholder { color: #a4afbf; }
@@ -55,13 +52,27 @@
 .login-alert { display: flex; align-items: flex-start; gap: 9px; margin: 22px 0 0; border-radius: 12px; font-size: .78rem; }
 .login-footer { padding: 16px; color: #8290a3; text-align: center; font-size: .7rem; }
 
+.reset-password-page { background: radial-gradient(circle at 15% 15%, rgba(29, 78, 216, .16), transparent 30rem), radial-gradient(circle at 85% 85%, rgba(234, 88, 12, .13), transparent 26rem), #f5f7fb; }
+.reset-password-header { min-height: 82px; display: flex; align-items: center; padding: 16px clamp(20px, 5vw, 72px); border-bottom: 1px solid rgba(148, 163, 184, .2); background: #fff; box-shadow: 0 8px 28px rgba(15, 23, 42, .05); }
+.reset-password-brand { display: flex; align-items: center; gap: 13px; color: #102a4c; }
+.reset-password-brand > span:last-child { display: flex; flex-direction: column; }
+.reset-password-brand strong { font-size: 1.15rem; font-weight: 800; }
+.reset-password-brand small { margin-top: 2px; color: #64748b; font-size: .7rem; }
+.reset-password-logo, .reset-password-status { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; color: #fff; background: linear-gradient(135deg, #1b5f9c, #123f71); box-shadow: 0 10px 22px rgba(22, 78, 134, .22); }
+.reset-password-stage { flex: 1; display: grid; place-items: center; padding: 44px 18px; }
+.reset-password-card { width: min(100%, 510px); padding: clamp(28px, 5vw, 48px); border: 1px solid rgba(148, 163, 184, .25); border-radius: 24px; background: #fff; box-shadow: 0 24px 65px rgba(15, 23, 42, .12); }
+.reset-password-card h1 { margin: 22px 0 0; color: #102a4c; font-size: 1.8rem; font-weight: 800; letter-spacing: -.035em; }
+.reset-password-status.success { color: #fff; background: #059669; box-shadow: 0 10px 22px rgba(5, 150, 105, .2); }
+.reset-password-success { text-align: center; }
+.reset-password-success .reset-password-status { margin: 0 auto; }
+.reset-password-success p { margin: 14px auto 0; color: #64748b; font-size: .88rem; line-height: 1.7; }
+
 @media (max-width: 991.98px) {
   .login-shell { max-width: 620px; }
   .login-form-pane { padding: 38px 30px 44px; }
 }
 
 @media (max-width: 575.98px) {
-  .login-slider-section .login-slider > div:first-child { height: 260px; }
   .login-stage { padding: 28px 12px 34px; }
   .login-shell { border-radius: 20px; }
   .login-form-pane { padding: 30px 22px 34px; }

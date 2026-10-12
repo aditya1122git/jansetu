@@ -17,11 +17,12 @@ async function main() {
   }
   await database.user.create({
     data: {
-      name: process.env.ADMIN_NAME?.trim() || 'JanSetu Administrator',
+      name: process.env.ADMIN_NAME?.trim() || 'E-Sewak Tarapur Administrator',
       email,
+      recoveryEmail: email,
       password: await bcrypt.hash(password, 12),
       role: 'ADMIN',
-      department: 'JanSetu Administration',
+      department: 'E-Sewak Tarapur Administration',
       isActive: true
     }
   });

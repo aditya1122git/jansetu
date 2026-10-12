@@ -36,7 +36,7 @@
   font-size: .98rem;
   font-weight: 800;
 }
-.analytics-chart-heading > i { color: #1d619b; font-size: 1.05rem; }
+.analytics-chart-heading > span { color: #1d619b; font-size: 1.05rem; }
 .analytics-chart-canvas { position: relative; height: 245px; }
 
 @media (max-width: 899.98px) {

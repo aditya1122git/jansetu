@@ -18,6 +18,7 @@ import { MasterDataModal } from './components/MasterDataModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ApplicationDetailDrawer } from './components/ApplicationDetailDrawer';
 import { LoginPage } from './components/LoginPage';
+import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { ApplicationDetailView } from './components/ApplicationDetailView';
 import { PortalDashboard } from './components/PortalDashboard';
 import './components/WorkspacePages.css';
@@ -36,7 +37,8 @@ export const App: React.FC = () => {
   const [rbacNotice, setRbacNotice] = useState<string | null>(null);
 
   // Dedicated Views & Selected App
-  const [currentView, setCurrentView] = useState<'home' | 'login' | 'dashboard' | 'application-detail'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'login' | 'reset-password' | 'dashboard' | 'application-detail'>('home');
+  const [passwordResetToken, setPasswordResetToken] = useState('');
   const [previousView, setPreviousView] = useState<'dashboard' | 'table'>('dashboard');
   const [detailAppId, setDetailAppId] = useState<number | string | null>(null);
   const [tableModalInitialTab, setTableModalInitialTab] = useState<'all' | 'important' | 'normal' | 'active_followups' | 'disposed'>('all');
@@ -48,8 +50,16 @@ export const App: React.FC = () => {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
 
   useEffect(() => {
-    checkAuthSession();
     fetchSettings();
+    const params = new URLSearchParams(window.location.search);
+    if (window.location.pathname === '/reset-password') {
+      setPasswordResetToken(params.get('token') || '');
+      setCurrentUser(null);
+      setCurrentView('reset-password');
+      setIsVerifyingSession(false);
+      return;
+    }
+    checkAuthSession();
   }, []);
 
   useEffect(() => {
@@ -157,11 +167,11 @@ export const App: React.FC = () => {
       }
     }
 
-    if (section === 'admin' && currentUser?.role !== 'ADMIN') {
+    if ((section === 'admin' || section === 'master') && currentUser?.role !== 'ADMIN') {
       setRbacNotice(
         language === 'hi'
           ? 'अनुमति अस्वीकृत: एडमिन डैशबोर्ड केवल व्यवस्थापक (Admin) के लिए अधिकृत है।'
-          : 'Permission Denied: Admin Console is restricted to Administrator role.'
+          : 'Permission Denied: This section is restricted to Administrator role.'
       );
       return;
     }
@@ -209,6 +219,7 @@ export const App: React.FC = () => {
             onApplicationCreated={handleApplicationCreated}
             language={language}
             settings={settings}
+            currentUser={currentUser}
           />
         );
       case 'table':
@@ -237,6 +248,7 @@ export const App: React.FC = () => {
             currentUser={currentUser}
             language={language}
             onSettingsUpdated={setSettings}
+            onProfileUpdated={setCurrentUser}
           />
         ) : null;
       default:
@@ -255,7 +267,7 @@ export const App: React.FC = () => {
             className="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shadow-lg ring-2 ring-white/20"
           />
           <div>
-            <div className="text-xl sm:text-2xl font-black text-white">JanSetu Bihar</div>
+            <div className="text-xl sm:text-2xl font-black text-white">E-Sewak Tarapur</div>
             <div className="text-xs text-blue-200">Application & Grievance Management Portal</div>
           </div>
         </div>
@@ -267,7 +279,24 @@ export const App: React.FC = () => {
     );
   }
 
-  // 2. Dedicated login page, opened explicitly from the public homepage.
+  // 2. Dedicated one-time password reset page opened from the email link.
+  if (currentView === 'reset-password') {
+    return (
+      <ResetPasswordPage
+        token={passwordResetToken}
+        onGoLogin={() => {
+          localStorage.removeItem('bacms_token');
+          setCurrentUser(null);
+          setPasswordResetToken('');
+          setSessionExpired(false);
+          setCurrentView('login');
+          window.history.replaceState({}, '', '/');
+        }}
+      />
+    );
+  }
+
+  // 3. Dedicated login page, opened explicitly from the public homepage.
   if (!currentUser && currentView === 'login') {
     return (
       <LoginPage
@@ -290,7 +319,7 @@ export const App: React.FC = () => {
     );
   }
 
-  // 3. Public homepage and authenticated portal workspace
+  // 4. Public homepage and authenticated portal workspace
   return (
     <div className="min-h-screen flex flex-col bg-[#fdfdfd] text-gray-800">
       {/* 1. Top Utility Bar with Configured Support Info */}
@@ -315,7 +344,7 @@ export const App: React.FC = () => {
         language={language}
         onGoHome={() => {
           setActiveModal(null);
-          setCurrentView('home');
+          setCurrentView(currentUser ? 'dashboard' : 'home');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
@@ -448,7 +477,7 @@ export const App: React.FC = () => {
             language={language}
           />
 
-          {/* 10. JanSetu Bihar Introduction Section with 3 Feature Blocks */}
+          {/* 10. E-Sewak Tarapur Introduction Section with 3 Feature Blocks */}
           <IntroSection language={language} />
 
           {/* 11. Simple Workflow Section with 4-Step Process */}

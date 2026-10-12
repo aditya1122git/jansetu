@@ -26,6 +26,8 @@ export interface AuthUser {
   email: string;
   role: 'ADMIN' | 'DATA_ENTRY' | 'REVIEWER' | 'READONLY';
   department?: string;
+  blockName?: string;
+  blockLgdCode?: string;
 }
 
 export interface AuthenticatedRequest extends Request {

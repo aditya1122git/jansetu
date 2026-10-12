@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, RefreshCw, User as UserIcon } from './icons';
+import { AlertCircle, Eye, EyeOff, Lock, RefreshCw, User as UserIcon } from './icons';
 import { api } from '../services/api';
 import { SystemSettings, User } from '../types';
-import { LoginSlider } from './LoginSlider';
 import { TopBar } from './TopBar';
 import { Header } from './Header';
 import { Navbar } from './Navbar';
@@ -17,7 +16,7 @@ interface LoginPageProps {
   onGoHome: () => void;
 }
 
-type AuthMode = 'login' | 'forgot' | 'reset';
+type AuthMode = 'login' | 'forgot';
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, setLanguage, settings, sessionExpired = false, onGoHome }) => {
   const [mode, setMode] = useState<AuthMode>('login');
@@ -29,10 +28,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
   const [captchaInput, setCaptchaInput] = useState('');
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-  const [resetToken, setResetToken] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -43,13 +38,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
   };
 
   const copy = language === 'hi' ? {
-    title: 'JanSetu Bihar में लॉगिन करें', subtitle: 'अपने अधिकृत खाते से साइन इन करें', email: 'ईमेल',
+    title: 'E-Sewak Tarapur में लॉगिन करें', subtitle: 'अपने अधिकृत खाते से साइन इन करें', email: 'ईमेल',
     password: 'पासवर्ड', captcha: 'कैप्चा', login: 'साइन इन करें', forgot: 'पासवर्ड भूल गए?',
     back: 'लॉगिन पर वापस जाएँ', send: 'रीसेट लिंक बनाएँ', reset: 'नया पासवर्ड सेट करें'
   } : {
-    title: 'Login to JanSetu Bihar', subtitle: 'Sign in with your authorized account', email: 'Email',
+    title: 'Login to E-Sewak Tarapur', subtitle: 'Sign in with your authorized account', email: 'Email',
     password: 'Password', captcha: 'CAPTCHA', login: 'Sign in', forgot: 'Forgot password?',
-    back: 'Back to login', send: 'Create reset link', reset: 'Set new password'
+    back: 'Back to login', send: 'Send reset link', reset: 'Set new password'
   };
 
   const clearFeedback = () => { setErrorMsg(null); setSuccessMsg(null); };
@@ -104,31 +99,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
     try {
       const result = await api.forgotPassword(forgotEmail.trim());
       setSuccessMsg(result.message);
-      if (result.resetToken) {
-        setResetToken(result.resetToken);
-        setMode('reset');
-      }
     } catch (error: any) {
       setErrorMsg(error.message || 'Password reset request failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReset = async (event: React.FormEvent) => {
-    event.preventDefault();
-    clearFeedback();
-    if (!resetToken.trim() || newPassword.length < 8) return setErrorMsg('Enter a valid token and a password of at least 8 characters.');
-    if (newPassword !== confirmPassword) return setErrorMsg('Passwords do not match.');
-    setLoading(true);
-    try {
-      const result = await api.resetPassword(resetToken.trim(), newPassword);
-      setSuccessMsg(result.message);
-      setMode('login');
-      setPassword('');
-      await loadCaptcha();
-    } catch (error: any) {
-      setErrorMsg(error.message || 'Password reset failed.');
     } finally {
       setLoading(false);
     }
@@ -155,15 +127,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
         onGoHome={onGoHome}
       />
 
-      <section className="login-slider-section" aria-label="JanSetu Bihar highlights">
-        <LoginSlider language={language} />
-      </section>
-
       <section ref={loginSectionRef} className="container login-stage">
         <div className="login-shell row g-0">
           <div className="col-12 login-form-pane">
             <div className="login-form-wrap">
-              <h2>{mode === 'login' ? copy.title : mode === 'forgot' ? copy.forgot : copy.reset}</h2>
+              <h2>{mode === 'login' ? copy.title : copy.forgot}</h2>
               <p className="login-subtitle">{mode === 'login' ? copy.subtitle : 'Complete the form below to continue.'}</p>
 
               {sessionExpired && mode === 'login' && (
@@ -198,7 +166,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
                   </div>
 
                   <button className="btn login-submit" disabled={loading} type="submit">
-                    {loading ? <span className="spinner-border spinner-border-sm" /> : <>{copy.login}<ArrowRight /></>}
+                    {loading ? 'Signing...' : copy.login}
                   </button>
                 </form>
               )}
@@ -207,28 +175,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
                 <form onSubmit={handleForgot} className="login-form">
                   <label className="form-label" htmlFor="forgot-email">{copy.email}</label>
                   <div className="login-input-group"><UserIcon /><input id="forgot-email" className="form-control" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="Enter email" /></div>
-                  <button className="btn login-submit" disabled={loading}>{copy.send}<ArrowRight /></button>
+                  <button className="btn login-submit" disabled={loading}>{loading ? 'Sending...' : copy.send}</button>
                   <button type="button" className="login-link mx-auto" onClick={() => switchMode('login')}>{copy.back}</button>
                 </form>
               )}
 
-              {mode === 'reset' && (
-                <form onSubmit={handleReset} className="login-form">
-                  <label className="form-label" htmlFor="reset-token">Reset token</label>
-                  <input id="reset-token" className="form-control login-standalone-input" value={resetToken} onChange={e => setResetToken(e.target.value)} />
-                  <label className="form-label" htmlFor="new-password">New password</label>
-                  <div className="login-input-group"><Lock /><input id="new-password" className="form-control" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} /><button type="button" className="login-eye" onClick={() => setShowNewPassword(value => !value)}>{showNewPassword ? <EyeOff /> : <Eye />}</button></div>
-                  <label className="form-label" htmlFor="confirm-password">Confirm password</label>
-                  <div className="login-input-group"><Lock /><input id="confirm-password" className="form-control" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></div>
-                  <button className="btn login-submit" disabled={loading}>{copy.reset}<ArrowRight /></button>
-                  <button type="button" className="login-link mx-auto" onClick={() => switchMode('login')}>{copy.back}</button>
-                </form>
-              )}
             </div>
           </div>
         </div>
       </section>
-      <footer className="login-footer">© {new Date().getFullYear()} JanSetu Bihar · Government of Bihar</footer>
+      <footer className="login-footer">© {new Date().getFullYear()} E-Sewak Tarapur · Government of Bihar</footer>
     </main>
   );
 };

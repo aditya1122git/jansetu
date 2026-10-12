@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Search,
@@ -17,10 +18,17 @@ import {
   ShieldAlert,
   Trash2,
   Database,
-  Paperclip
+  Paperclip,
+  Lock
 } from './icons';
 import { api } from '../services/api';
-import { District, ComplaintCategory, Application, User } from '../types';
+import { ComplaintCategory, Application, User } from '../types';
+
+const TARAPUR_BLOCKS = [
+  { name: 'Tarapur', lgdCode: '2458' },
+  { name: 'Sangrampur', lgdCode: '2457' },
+  { name: 'Asarganj', lgdCode: '2451' }
+] as const;
 
 interface ApplicationTableModalProps {
   isOpen: boolean;
@@ -32,6 +40,10 @@ interface ApplicationTableModalProps {
   initialTab?: 'all' | 'important' | 'normal' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'active_followups' | 'disposed';
   onDataChanged?: () => void;
 }
+
+type DestructiveAction =
+  | { kind: 'single'; application: Application }
+  | { kind: 'all' };
 
 export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
   isOpen,
@@ -56,13 +68,14 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
 
   // Search & Filters State
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
+  const [selectedBlockName, setSelectedBlockName] = useState<string>('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedPriority, setSelectedPriority] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [assignedEmployeeFilter, setAssignedEmployeeFilter] = useState('');
+  const [selectedOperatorId, setSelectedOperatorId] = useState('');
 
   // Pagination & Sorting
   const [page, setPage] = useState(1);
@@ -74,8 +87,8 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
 
   // Data
   const [applications, setApplications] = useState<Application[]>([]);
-  const [districts, setDistricts] = useState<District[]>([]);
   const [categories, setCategories] = useState<ComplaintCategory[]>([]);
+  const [operators, setOperators] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [editApp, setEditApp] = useState<Application | null>(null);
 
@@ -86,10 +99,15 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
   const [editEmployee, setEditEmployee] = useState('');
   const [editRemarks, setEditRemarks] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [destructiveAction, setDestructiveAction] = useState<DestructiveAction | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      loadDistrictsAndCategories();
+      loadFilterData();
     }
   }, [isOpen]);
 
@@ -103,22 +121,23 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
     page,
     sortBy,
     sortOrder,
-    selectedDistrictId,
+    selectedBlockName,
     selectedCategoryId,
     selectedPriority,
     selectedStatus,
     dateFrom,
-    dateTo
+    dateTo,
+    selectedOperatorId
   ]);
 
-  const loadDistrictsAndCategories = async () => {
+  const loadFilterData = async () => {
     try {
-      const [dRes, cRes] = await Promise.all([
-        api.getDistricts(),
-        api.getCategories()
-      ]);
-      setDistricts(dRes.districts);
+      const cRes = await api.getCategories();
       setCategories(cRes.categories);
+      if (currentUser?.role === 'ADMIN') {
+        const userRes = await api.getUsers();
+        setOperators(userRes.users.filter(user => user.role === 'DATA_ENTRY'));
+      }
     } catch (e) {
       console.error('Error loading master filters', e);
     }
@@ -133,11 +152,12 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
         sortBy,
         sortOrder,
         search: searchTerm,
-        districtId: selectedDistrictId,
+        blockName: selectedBlockName,
         categoryId: selectedCategoryId,
         priority: selectedPriority,
         status: selectedStatus,
         assignedEmployee: assignedEmployeeFilter,
+        createdById: selectedOperatorId,
         dateFrom,
         dateTo
       };
@@ -165,10 +185,11 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
 
   const handleExportCsv = () => {
     const params: Record<string, any> = {
-      districtId: selectedDistrictId,
+      blockName: selectedBlockName,
       categoryId: selectedCategoryId,
       priority: selectedPriority || (activeTab === 'important' ? 'IMPORTANT' : activeTab === 'normal' ? 'NORMAL' : ''),
-      status: selectedStatus || (['pending', 'in_progress', 'completed'].includes(activeTab) ? activeTab.toUpperCase() : '')
+      status: selectedStatus || (['pending', 'in_progress', 'completed'].includes(activeTab) ? activeTab.toUpperCase() : ''),
+      createdById: selectedOperatorId
     };
     window.open(api.getExportCsvUrl(params), '_blank');
   };
@@ -202,44 +223,77 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
     }
   };
 
-  const handleDeleteApplication = async (app: Application) => {
-    if (!window.confirm(language === 'hi'
-      ? `क्या आप वाकई आवेदन ${app.applicationId} (${app.applicantName}) को अपने डेटाबेस से स्थायी रूप से हटाना चाहते हैं?`
-      : `Are you sure you want to permanently delete application ${app.applicationId} (${app.applicantName}) from your database?`)) {
-      return;
-    }
-    try {
-      await api.deleteApplication(app.id);
-      fetchApplications();
-      if (onDataChanged) onDataChanged();
-      alert(language === 'hi' ? 'आवेदन रिकॉर्ड सफलतापूर्वक हटा दिया गया।' : 'Application record successfully deleted.');
-    } catch (e: any) {
-      alert('Error deleting application: ' + e.message);
-    }
+  const openDeleteConfirmation = (action: DestructiveAction) => {
+    setDestructiveAction(action);
+    setDeletePassword('');
+    setDeleteError(null);
+    setActionNotice(null);
   };
 
-  const handleClearAllData = async () => {
-    if (!window.confirm(language === 'hi'
-      ? 'चेतावनी: क्या आप वाकई डेटाबेस के सभी आवेदन रिकॉर्ड स्थायी रूप से हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।'
-      : 'Warning: Are you sure you want to permanently clear all application records from your database? This action cannot be undone.')) {
+  const closeDeleteConfirmation = () => {
+    if (isDeleting) return;
+    setDestructiveAction(null);
+    setDeletePassword('');
+    setDeleteError(null);
+  };
+
+  const confirmDestructiveAction = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!destructiveAction) return;
+    if (!deletePassword) {
+      setDeleteError(language === 'hi' ? 'कृपया अपना अकाउंट पासवर्ड दर्ज करें।' : 'Please enter your account password.');
       return;
     }
+
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await api.clearAllApplications();
-      fetchApplications();
+      const isClearAll = destructiveAction.kind === 'all';
+      if (isClearAll) {
+        await api.clearAllApplications(deletePassword);
+      } else {
+        await api.deleteApplication(destructiveAction.application.id, deletePassword);
+      }
+      await fetchApplications();
       if (onDataChanged) onDataChanged();
-      alert(language === 'hi' ? 'डेटाबेस से सभी आवेदन सफलतापूर्वक हटा दिए गए।' : 'All application records have been permanently cleared.');
+      setDestructiveAction(null);
+      setDeletePassword('');
+      setActionNotice({
+        type: 'success',
+        message: isClearAll
+          ? (language === 'hi' ? 'सभी आवेदन रिकॉर्ड सफलतापूर्वक हटा दिए गए।' : 'All application records were permanently cleared.')
+          : (language === 'hi' ? 'आवेदन रिकॉर्ड सफलतापूर्वक हटा दिया गया।' : 'Application record was permanently deleted.')
+      });
     } catch (e: any) {
-      alert('Error clearing applications: ' + (e.response?.data?.message || e.message));
+      setDeleteError(e.message || 'Unable to complete the deletion.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const canEdit = currentUser?.role === 'ADMIN' || currentUser?.role === 'DATA_ENTRY' || currentUser?.role === 'REVIEWER';
+  const canClearAll = currentUser?.role === 'ADMIN';
 
   if (!isOpen) return null;
 
   return (
     <div className={pageMode ? 'workspace-page' : 'fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4'}>
+      {actionNotice && (
+        <div className="fixed right-4 top-24 z-[80] w-[min(92vw,390px)] rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl" role="status">
+          <div className="flex items-start gap-3">
+            <div className="grid h-9 w-9 flex-none place-items-center rounded-full bg-emerald-100 text-emerald-700">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-gray-900">Action completed</p>
+              <p className="mt-1 text-xs leading-relaxed text-gray-600">{actionNotice.message}</p>
+            </div>
+            <button type="button" onClick={() => setActionNotice(null)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100" aria-label="Close message">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
       <div className="workspace-page-panel bg-white rounded-2xl max-w-7xl w-full shadow-2xl overflow-hidden border border-gray-100 animate-scaleUp my-4 max-h-[95vh] flex flex-col">
         {/* Modal Header */}
         <div className="bg-[#1C4D8D] text-white px-6 py-3.5 flex items-center justify-between flex-shrink-0">
@@ -259,10 +313,10 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canEdit && (
+            {canClearAll && (
               <>
                 <button
-                  onClick={handleClearAllData}
+                  onClick={() => openDeleteConfirmation({ kind: 'all' })}
                   className="bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
                   title="Permanently clear all application data"
                 >
@@ -342,13 +396,14 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
               type="button"
               onClick={() => {
                 setSearchTerm('');
-                setSelectedDistrictId('');
+                setSelectedBlockName('');
                 setSelectedCategoryId('');
                 setSelectedPriority('');
                 setSelectedStatus('');
                 setDateFrom('');
                 setDateTo('');
                 setAssignedEmployeeFilter('');
+                setSelectedOperatorId('');
                 setPage(1);
               }}
               className="px-3 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-200 transition"
@@ -359,20 +414,28 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
           </form>
 
           {/* Secondary Filter Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2">
+            {currentUser?.role === 'ADMIN' && (
+              <div>
+                <select value={selectedOperatorId} onChange={(event) => { setSelectedOperatorId(event.target.value); setPage(1); }} className="w-full border border-blue-300 rounded-lg px-2 py-1.5 bg-blue-50 text-[#1C4D8D] font-semibold outline-none">
+                  <option value="">All Operators</option>
+                  {operators.map(operator => <option key={operator.id} value={operator.id}>{operator.name} · {operator.blockName || 'No block'}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <select
-                value={selectedDistrictId}
+                value={selectedBlockName}
                 onChange={(e) => {
-                  setSelectedDistrictId(e.target.value);
+                  setSelectedBlockName(e.target.value);
                   setPage(1);
                 }}
                 className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-700 outline-none"
               >
-                <option value="">All 38 Districts</option>
-                {districts.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
+                <option value="">All Blocks</option>
+                {TARAPUR_BLOCKS.map((block) => (
+                  <option key={block.lgdCode} value={block.name}>
+                    {block.name} · LGD {block.lgdCode}
                   </option>
                 ))}
               </select>
@@ -497,6 +560,8 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
                   <th className="py-3 px-3">Applicant Name</th>
                   <th className="py-3 px-3">District</th>
                   <th className="py-3 px-3">Assembly (Code)</th>
+                  <th className="py-3 px-3">Block (LGD)</th>
+                  {currentUser?.role === 'ADMIN' && <th className="py-3 px-3">Entered By</th>}
                   <th className="py-3 px-3">Category</th>
                   <th className="py-3 px-3">Priority</th>
                   <th className="py-3 px-3">Status</th>
@@ -541,6 +606,8 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
                         {app.verifiedAcCode}
                       </span>
                     </td>
+                    <td className="py-3 px-3"><div className="font-semibold text-gray-900">{app.blockName || '—'}</div><div className="font-mono text-[10px] text-gray-500">{app.blockLgdCode || '—'}</div></td>
+                    {currentUser?.role === 'ADMIN' && <td className="py-3 px-3"><div className="font-semibold text-gray-900">{app.createdByName || 'Legacy record'}</div><div className="text-[10px] text-gray-500">{app.createdByEmail || '—'}</div></td>}
                     <td className="py-3 px-3 text-gray-700 font-medium">
                       {app.categoryName || app.category?.name || 'General'}
                     </td>
@@ -601,7 +668,7 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDeleteApplication(app)}
+                              onClick={() => openDeleteConfirmation({ kind: 'single', application: app })}
                               className="p-1.5 text-red-600 hover:bg-red-100 rounded transition"
                               title="Delete Application"
                             >
@@ -643,6 +710,81 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Password-protected destructive action confirmation */}
+        {destructiveAction && createPortal((
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-md"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeDeleteConfirmation();
+            }}
+          >
+            <form
+              onSubmit={confirmDestructiveAction}
+              className="w-full max-w-md overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_30px_90px_rgba(2,6,23,.45)] animate-scaleUp"
+            >
+              <div className="flex items-center gap-4 border-b border-red-100 bg-gradient-to-r from-red-50 to-orange-50 px-6 py-5">
+                <div className="grid h-12 w-12 flex-none place-items-center rounded-2xl bg-red-600 text-white shadow-lg shadow-red-200">
+                  <ShieldAlert className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-gray-950">
+                    {destructiveAction.kind === 'all' ? 'Clear all application data?' : 'Delete application?'}
+                  </h4>
+                  <p className="truncate text-xs text-red-700">
+                    {destructiveAction.kind === 'all'
+                      ? `${total} application record${total === 1 ? '' : 's'} will be removed`
+                      : `${destructiveAction.application.applicationId} · ${destructiveAction.application.applicantName}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-5 p-6">
+                <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+                  This action is permanent. Enter the password for <strong>{currentUser?.email}</strong> to confirm that you authorize this deletion.
+                </p>
+
+                <div>
+                  <label htmlFor="delete-confirm-password" className="mb-1.5 block text-xs font-bold text-gray-700">
+                    Account password
+                  </label>
+                  <div className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-100">
+                    <Lock className="h-4 w-4 flex-none text-gray-400" />
+                    <input
+                      id="delete-confirm-password"
+                      type="password"
+                      autoFocus
+                      autoComplete="current-password"
+                      value={deletePassword}
+                      onChange={(event) => {
+                        setDeletePassword(event.target.value);
+                        setDeleteError(null);
+                      }}
+                      className="h-11 min-w-0 flex-1 border-0 bg-transparent text-sm outline-none"
+                      placeholder="Enter your password"
+                    />
+                  </div>
+                  {deleteError && (
+                    <div className="mt-2 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700" role="alert">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-none" />
+                      <span>{deleteError}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+                  <button type="button" disabled={isDeleting} onClick={closeDeleteConfirmation} className="rounded-xl border border-gray-300 px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={isDeleting || !deletePassword} className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {isDeleting ? 'Verifying & deleting…' : destructiveAction.kind === 'all' ? 'Clear all data' : 'Delete permanently'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        ), document.body)}
 
         {/* Quick Edit Modal */}
         {editApp && (

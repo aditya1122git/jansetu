@@ -1,15 +1,20 @@
 import { database } from '../database';
-import { Router, Request, Response } from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { Router } from 'express';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
 // Enforce authentication on all reports routes
 router.use(authenticateToken);
 
+const getApplicationScope = (req: AuthenticatedRequest) =>
+  req.user?.role === 'DATA_ENTRY' ? { createdById: req.user.id } : {};
+
 // GET /api/reports/dashboard-stats
 router.get('/dashboard-stats', async (req, res) => {
   try {
+    const authReq = req as AuthenticatedRequest;
+    const operatorScope = getApplicationScope(authReq);
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -24,21 +29,23 @@ router.get('/dashboard-stats', async (req, res) => {
       overdue,
       receivedToday
     ] = await Promise.all([
-      database.application.count(),
-      database.application.count({ where: { priority: 'IMPORTANT' } }),
-      database.application.count({ where: { priority: 'NORMAL' } }),
-      database.application.count({ where: { status: 'PENDING' } }),
-      database.application.count({ where: { status: 'IN_PROGRESS' } }),
-      database.application.count({ where: { status: 'AWAITING_INFO' } }),
-      database.application.count({ where: { status: { in: ['COMPLETED', 'DISPOSED'] } } }),
+      database.application.count({ where: operatorScope }),
+      database.application.count({ where: { ...operatorScope, priority: 'IMPORTANT' } }),
+      database.application.count({ where: { ...operatorScope, priority: 'NORMAL' } }),
+      database.application.count({ where: { ...operatorScope, status: 'PENDING' } }),
+      database.application.count({ where: { ...operatorScope, status: 'IN_PROGRESS' } }),
+      database.application.count({ where: { ...operatorScope, status: 'AWAITING_INFO' } }),
+      database.application.count({ where: { ...operatorScope, status: { in: ['COMPLETED', 'DISPOSED'] } } }),
       database.application.count({
         where: {
+          ...operatorScope,
           status: { notIn: ['COMPLETED', 'DISPOSED'] },
           nextFollowUpDate: { lte: now }
         }
       }),
       database.application.count({
         where: {
+          ...operatorScope,
           dateReceived: { gte: startOfToday }
         }
       })
@@ -69,6 +76,7 @@ router.get('/dashboard-stats', async (req, res) => {
 // GET /api/reports/district-wise
 router.get('/district-wise', async (req, res) => {
   try {
+    const operatorScope = getApplicationScope(req as AuthenticatedRequest);
     const districts = await database.district.findMany({
       where: { isActive: true },
       orderBy: { name: 'asc' },
@@ -80,6 +88,7 @@ router.get('/district-wise', async (req, res) => {
           }
         },
         applications: {
+          where: operatorScope,
           select: {
             priority: true,
             status: true
@@ -106,12 +115,12 @@ router.get('/district-wise', async (req, res) => {
         districtCode: d.code,
         districtName: d.name,
         totalSeats: d._count.constituencies,
-        totalApplications: d._count.applications,
+        totalApplications: d.applications.length,
         importantCount,
         normalCount,
         pendingCount,
         completedCount,
-        resolutionRate: d._count.applications > 0 ? Math.round((completedCount / d._count.applications) * 100) : 0
+        resolutionRate: d.applications.length > 0 ? Math.round((completedCount / d.applications.length) * 100) : 0
       };
     });
 
@@ -124,10 +133,12 @@ router.get('/district-wise', async (req, res) => {
 // GET /api/reports/category-wise
 router.get('/category-wise', async (req, res) => {
   try {
+    const operatorScope = getApplicationScope(req as AuthenticatedRequest);
     const categories = await database.complaintCategory.findMany({
       where: { isActive: true },
       include: {
         applications: {
+          where: operatorScope,
           select: { priority: true, status: true }
         }
       }
@@ -167,8 +178,9 @@ router.get('/category-wise', async (req, res) => {
 // GET /api/reports/ageing
 router.get('/ageing', async (req, res) => {
   try {
+    const operatorScope = getApplicationScope(req as AuthenticatedRequest);
     const pendingApps = await database.application.findMany({
-      where: { status: { not: 'COMPLETED' } },
+      where: { ...operatorScope, status: { notIn: ['COMPLETED', 'DISPOSED'] } },
       select: { dateReceived: true, priority: true }
     });
 
@@ -203,7 +215,9 @@ router.get('/ageing', async (req, res) => {
 // GET /api/reports/employee-workload
 router.get('/employee-workload', async (req, res) => {
   try {
+    const operatorScope = getApplicationScope(req as AuthenticatedRequest);
     const apps = await database.application.findMany({
+      where: operatorScope,
       select: { assignedEmployee: true, status: true, priority: true }
     });
 

@@ -6,11 +6,38 @@ import {
   Application,
   DashboardStats,
   DistrictStat,
-  CategoryStat,
-  AuditLogRecord
+  CategoryStat
 } from '../types';
 
 const API_BASE = '/api';
+
+const browserFetch = globalThis.fetch.bind(globalThis);
+let activeRequestCount = 0;
+const requestActivityListeners = new Set<(active: boolean) => void>();
+
+const notifyRequestActivity = () => {
+  const active = activeRequestCount > 0;
+  requestActivityListeners.forEach(listener => listener(active));
+};
+
+export const subscribeToApiActivity = (listener: (active: boolean) => void) => {
+  requestActivityListeners.add(listener);
+  listener(activeRequestCount > 0);
+  return () => { requestActivityListeners.delete(listener); };
+};
+
+// All API calls in this module pass through this wrapper so the UI can show
+// one consistent loader, including parallel requests.
+async function fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  activeRequestCount += 1;
+  notifyRequestActivity();
+  try {
+    return await browserFetch(input, init);
+  } finally {
+    activeRequestCount = Math.max(0, activeRequestCount - 1);
+    notifyRequestActivity();
+  }
+}
 
 function getHeaders(isFormData = false): HeadersInit {
   const token = localStorage.getItem('bacms_token');
@@ -52,7 +79,7 @@ export const api = {
     return data;
   },
 
-  async forgotPassword(email: string): Promise<{ success: boolean; message: string; resetToken?: string }> {
+  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     const res = await fetch(`${API_BASE}/auth/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -71,6 +98,13 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Password reset failed');
+    return data;
+  },
+
+  async validatePasswordResetToken(token: string): Promise<{ valid: boolean }> {
+    const res = await fetch(`${API_BASE}/auth/reset-password/${encodeURIComponent(token)}/validate`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'This password reset link is invalid or has expired.');
     return data;
   },
 
@@ -120,10 +154,72 @@ export const api = {
     return data;
   },
 
-  async getAuditLogs(): Promise<{ logs: AuditLogRecord[] }> {
-    const res = await fetch(`${API_BASE}/auth/audit-logs`, { headers: getHeaders() });
+  async updateAdminProfile(payload: { name: string; email: string; recoveryEmail: string; phone?: string }): Promise<{ success: boolean; message: string; user: User; token: string }> {
+    const res = await fetch(`${API_BASE}/auth/profile`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to fetch audit logs');
+    if (!res.ok) throw new Error(data.error || 'Failed to update admin profile');
+    if (data.token) localStorage.setItem('bacms_token', data.token);
+    return data;
+  },
+
+  async changeAdminPassword(payload: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`${API_BASE}/auth/change-password`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to change password');
+    return data;
+  },
+
+  async createOperator(payload: {
+    name: string;
+    email: string;
+    phone: string;
+    blockName: string;
+    blockLgdCode: string;
+    password: string;
+    confirmPassword: string;
+  }): Promise<{ user: User }> {
+    const res = await fetch(`${API_BASE}/auth/users`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        ...payload,
+        role: 'DATA_ENTRY',
+        districtName: 'Munger',
+        constituencyName: 'Tarapur'
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create operator');
+    return data;
+  },
+
+  async deleteOperator(id: string, password: string): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`${API_BASE}/auth/users/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete operator account');
+    return data;
+  },
+
+  async updateOperatorBlock(id: string, blockName: string): Promise<{ success: boolean; message: string; user: User }> {
+    const res = await fetch(`${API_BASE}/auth/users/${id}/block`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ blockName })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update operator block');
     return data;
   },
 
@@ -235,31 +331,33 @@ export const api = {
     return data;
   },
 
-  async deleteApplication(id: number | string): Promise<{ success: boolean; message: string }> {
+  async deleteApplication(id: number | string, password: string): Promise<{ success: boolean; message: string }> {
     const res = await fetch(`${API_BASE}/applications/${id}`, {
       method: 'DELETE',
-      headers: getHeaders()
+      headers: getHeaders(),
+      body: JSON.stringify({ password })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to delete application');
     return data;
   },
 
-  async bulkDeleteApplications(ids: (number | string)[]): Promise<{ success: boolean; count: number; message: string }> {
+  async bulkDeleteApplications(ids: (number | string)[], password: string): Promise<{ success: boolean; count: number; message: string }> {
     const res = await fetch(`${API_BASE}/applications/bulk-delete`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ ids })
+      body: JSON.stringify({ ids, password })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to delete applications');
     return data;
   },
 
-  async clearAllApplications(): Promise<{ success: boolean; count: number; message: string }> {
+  async clearAllApplications(password: string): Promise<{ success: boolean; count: number; message: string }> {
     const res = await fetch(`${API_BASE}/applications/clear-all`, {
       method: 'POST',
-      headers: getHeaders()
+      headers: getHeaders(),
+      body: JSON.stringify({ password })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to clear all applications');

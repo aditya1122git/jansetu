@@ -4,10 +4,16 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  recoveryEmail?: string;
   role: UserRole;
   department?: string;
   phone?: string;
+  districtName?: string;
+  constituencyName?: string;
+  blockName?: string;
+  blockLgdCode?: string;
   isActive: boolean;
+  _count?: { applications?: number };
 }
 
 export interface District {
@@ -99,6 +105,11 @@ export interface Application {
   customConstituency?: string | null;
   isUnverifiedAc?: boolean;
   verifiedAcCode: string;
+  blockName?: string;
+  blockLgdCode?: string;
+  createdById?: string;
+  createdByName?: string;
+  createdByEmail?: string;
   categoryId?: string | null;
   category?: ComplaintCategory | null;
   categoryName?: string;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight } from './icons';
+import { ArrowRight, BarChart3, Database, FilePlus } from './icons';
 
 interface ServiceCardsProps {
   onOpenSection: (section: 'form' | 'table' | 'reports') => void;
@@ -17,8 +17,8 @@ export const ServiceCards: React.FC<ServiceCardsProps> = ({ onOpenSection, langu
           </h2>
           <p className="text-gray-600 text-sm sm:text-base mt-1.5 max-w-2xl mx-auto font-medium">
             {language === 'hi'
-              ? 'JanSetu Bihar के तीन मुख्य स्तंभ — पारदर्शी, जवाबदेह और सुव्यवस्थित सेवा प्रवाह'
-              : 'Three core pillars of JanSetu Bihar — Transparent, accountable, and structured operational workflows.'}
+              ? 'E-Sewak Tarapur के तीन मुख्य स्तंभ — पारदर्शी, जवाबदेह और सुव्यवस्थित सेवा प्रवाह'
+              : 'Three core pillars of E-Sewak Tarapur — Transparent, accountable, and structured operational workflows.'}
           </p>
         </div>
 
@@ -32,9 +32,8 @@ export const ServiceCards: React.FC<ServiceCardsProps> = ({ onOpenSection, langu
             tabIndex={0}
             aria-label="New Application"
           >
-            <span className="bg-number">01</span>
             <div className="icon-box">
-              <img src="/assets/Web_Images/1.png" alt="नया आवेदन" />
+              <FilePlus className="h-7 w-7 text-white" />
             </div>
             <h4>{language === 'hi' ? 'नया आवेदन' : 'New Application'}</h4>
             <p>
@@ -57,9 +56,8 @@ export const ServiceCards: React.FC<ServiceCardsProps> = ({ onOpenSection, langu
             tabIndex={0}
             aria-label="Application Status"
           >
-            <span className="bg-number">02</span>
             <div className="icon-box">
-              <img src="/assets/Web_Images/2.png" alt="आवेदन की स्थिति" />
+              <Database className="h-7 w-7 text-white" />
             </div>
             <h4>{language === 'hi' ? 'आवेदन की स्थिति' : 'Application Status'}</h4>
             <p>
@@ -82,9 +80,8 @@ export const ServiceCards: React.FC<ServiceCardsProps> = ({ onOpenSection, langu
             tabIndex={0}
             aria-label="Reports & Analytics"
           >
-            <span className="bg-number">03</span>
             <div className="icon-box">
-              <img src="/assets/Web_Images/4.png" alt="रिपोर्ट एवं विश्लेषण" />
+              <BarChart3 className="h-7 w-7 text-white" />
             </div>
             <h4>{language === 'hi' ? 'रिपोर्ट एवं विश्लेषण' : 'Reports & Analytics'}</h4>
             <p>

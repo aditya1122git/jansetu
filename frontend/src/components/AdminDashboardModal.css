@@ -74,7 +74,7 @@
 }
 
 .admin-dashboard-header > div:first-child { gap: 14px !important; }
-.admin-dashboard-header > div:first-child > i {
+.admin-dashboard-header > div:first-child > span {
   width: 44px !important;
   height: 44px !important;
   display: grid !important;
