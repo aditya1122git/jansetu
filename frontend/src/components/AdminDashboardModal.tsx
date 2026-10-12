@@ -93,7 +93,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [deleteOperatorError, setDeleteOperatorError] = useState<string | null>(null);
   const [isDeletingOperator, setIsDeletingOperator] = useState(false);
   const [userAccountMsg, setUserAccountMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [updatingOperatorId, setUpdatingOperatorId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && currentUser?.role === 'ADMIN') {
@@ -249,21 +248,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       setDeleteOperatorError(error.message || 'Failed to delete operator account.');
     } finally {
       setIsDeletingOperator(false);
-    }
-  };
-
-  const handleOperatorBlockChange = async (operator: User, blockName: string) => {
-    if (!blockName) return;
-    setUpdatingOperatorId(operator.id);
-    setUserAccountMsg(null);
-    try {
-      const result = await api.updateOperatorBlock(operator.id, blockName);
-      setUsers(items => items.map(item => item.id === operator.id ? { ...item, ...result.user } : item));
-      setUserAccountMsg({ type: 'success', text: result.message });
-    } catch (error: any) {
-      setUserAccountMsg({ type: 'error', text: error.message || 'Failed to update block mapping.' });
-    } finally {
-      setUpdatingOperatorId(null);
     }
   };
 
@@ -483,7 +467,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           }`}>
                             {u.role === 'DATA_ENTRY' ? 'OPERATOR' : u.role}
                           </span>
-                          <select value={u.blockName || ''} disabled={updatingOperatorId === u.id} onChange={event => handleOperatorBlockChange(u, event.target.value)} className="mt-2 w-full min-w-[150px] rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[10px] font-bold text-blue-800 outline-none disabled:opacity-60"><option value="">Assign block</option>{OPERATOR_BLOCKS.map(block => <option key={block.lgdCode} value={block.name}>{block.name} · LGD {block.lgdCode}</option>)}</select>
+                          <div className="mt-2 inline-flex min-w-[150px] items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-[10px] font-bold text-blue-800"><Lock className="h-3 w-3" /><span>{u.blockName ? `${u.blockName} · LGD ${u.blockLgdCode || '—'}` : 'Block not assigned'}</span></div>
                         </td>
                         <td className="py-2.5 px-3 text-center font-black text-[#1C4D8D]">{u._count?.applications || 0}</td>
                         <td className="py-2.5 px-3 text-center">
@@ -680,10 +664,37 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         </div>
       </div>
       {operatorToDelete && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-md" onMouseDown={event => { if (event.target === event.currentTarget) closeDeleteOperator(); }}>
-          <form onSubmit={handleDeleteOperator} className="w-full max-w-md overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_30px_90px_rgba(2,6,23,.45)]">
-            <div className="flex items-center gap-4 border-b border-red-100 bg-gradient-to-r from-red-50 to-orange-50 px-6 py-5"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-red-600 text-white shadow-lg shadow-red-200"><Trash2 className="h-5 w-5" /></div><div><h4 className="font-black text-gray-950">Delete operator account?</h4><p className="mt-1 text-xs text-red-700">{operatorToDelete.name} · {operatorToDelete.blockName} Block</p></div></div>
-            <div className="space-y-5 p-6"><p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">The login account will be permanently removed. Applications entered by this operator will remain available to the admin with the operator name and block preserved.</p><div><label htmlFor="delete-operator-password" className="mb-1.5 block text-xs font-bold text-gray-700">Admin password</label><div className="flex items-center gap-2 rounded-xl border border-gray-300 px-3 focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-100"><Lock className="h-4 w-4 text-gray-400" /><input id="delete-operator-password" type="password" autoFocus autoComplete="current-password" value={deleteOperatorPassword} onChange={event => { setDeleteOperatorPassword(event.target.value); setDeleteOperatorError(null); }} className="h-11 min-w-0 flex-1 border-0 bg-transparent outline-none" placeholder="Enter your password" /></div>{deleteOperatorError && <div className="mt-2 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"><AlertCircle className="h-3.5 w-3.5" />{deleteOperatorError}</div>}</div><div className="flex justify-end gap-2 border-t border-gray-100 pt-4"><button type="button" disabled={isDeletingOperator} onClick={closeDeleteOperator} className="rounded-xl border border-gray-300 px-4 py-2.5 font-bold text-gray-700 hover:bg-gray-50">Cancel</button><button type="submit" disabled={isDeletingOperator || !deleteOperatorPassword} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-bold text-white hover:bg-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" />{isDeletingOperator ? 'Deleting…' : 'Delete operator'}</button></div></div>
+        <div className="operator-delete-overlay" onMouseDown={event => { if (event.target === event.currentTarget) closeDeleteOperator(); }}>
+          <form onSubmit={handleDeleteOperator} className="operator-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-operator-title">
+            <header className="operator-delete-header">
+              <span className="operator-delete-icon"><Trash2 /></span>
+              <div>
+                <h4 id="delete-operator-title">Delete operator account?</h4>
+                <p>{operatorToDelete.name} · {operatorToDelete.blockName || 'Unassigned'} Block</p>
+              </div>
+              <button type="button" className="operator-delete-close" disabled={isDeletingOperator} onClick={closeDeleteOperator} aria-label="Close confirmation"><X /></button>
+            </header>
+
+            <div className="operator-delete-content">
+              <div className="operator-delete-preservation">
+                <CheckCircle />
+                <div><strong>Application data will remain safe</strong><p>Only this login account will be removed. All {operatorToDelete._count?.applications || 0} application entries, documents, operator name and block details will remain available to the admin.</p></div>
+              </div>
+
+              <div>
+                <label htmlFor="delete-operator-password">Confirm with admin password</label>
+                <div className="operator-delete-password">
+                  <Lock />
+                  <input id="delete-operator-password" type="password" autoFocus autoComplete="current-password" value={deleteOperatorPassword} onChange={event => { setDeleteOperatorPassword(event.target.value); setDeleteOperatorError(null); }} placeholder="Enter your admin password" />
+                </div>
+                {deleteOperatorError && <div className="operator-delete-error"><AlertCircle />{deleteOperatorError}</div>}
+              </div>
+
+              <div className="operator-delete-actions">
+                <button type="button" disabled={isDeletingOperator} onClick={closeDeleteOperator}>Cancel</button>
+                <button type="submit" disabled={isDeletingOperator || !deleteOperatorPassword}><Trash2 />{isDeletingOperator ? 'Deleting…' : 'Delete account only'}</button>
+              </div>
+            </div>
           </form>
         </div>,
         document.body

@@ -212,17 +212,6 @@ export const api = {
     return data;
   },
 
-  async updateOperatorBlock(id: string, blockName: string): Promise<{ success: boolean; message: string; user: User }> {
-    const res = await fetch(`${API_BASE}/auth/users/${id}/block`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify({ blockName })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update operator block');
-    return data;
-  },
-
   // --- Master Data ---
   async getDistricts(): Promise<{ districts: District[] }> {
     const res = await fetch(`${API_BASE}/master/districts`);

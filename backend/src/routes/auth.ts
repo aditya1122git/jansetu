@@ -241,7 +241,6 @@ router.post('/forgot-password', async (req, res) => {
     if (!email) {
       return res.status(400).json({ error: 'Please provide your registered email address.' });
     }
-
     const mailer = createResetMailer();
     if (!mailer) {
       return res.status(503).json({ error: 'Password reset email is not configured. Please contact the administrator.' });
@@ -614,38 +613,6 @@ router.post('/users', authenticateToken, requireAdmin, async (req: Authenticated
   }
 });
 
-// PUT /api/auth/users/:id/block - Assign an operator to one verified Tarapur block.
-router.put('/users/:id/block', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const blockName = String(req.body?.blockName || '');
-    const tarapurBlocks: Record<string, string> = { Asarganj: '2451', Sangrampur: '2457', Tarapur: '2458' };
-    if (!tarapurBlocks[blockName]) {
-      return res.status(400).json({ error: 'Select a valid Tarapur block.' });
-    }
-
-    const operator = await database.user.findUnique({ where: { id: req.params.id } });
-    if (!operator || operator.role !== 'DATA_ENTRY') {
-      return res.status(404).json({ error: 'Operator account not found.' });
-    }
-
-    const updated = await database.user.update({
-      where: { id: operator.id },
-      data: {
-        districtName: 'Munger',
-        constituencyName: 'Tarapur',
-        blockName,
-        blockLgdCode: tarapurBlocks[blockName],
-        department: `${blockName} Operator`
-      },
-      select: { id: true, name: true, email: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true }
-    });
-
-    res.json({ success: true, message: `${updated.name} is now mapped to ${blockName} block.`, user: updated });
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to update operator block mapping.' });
-  }
-});
-
 // DELETE /api/auth/users/:id - Permanently remove an operator account.
 // Existing applications retain their creator snapshot for historical reporting.
 router.delete('/users/:id', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -666,6 +633,9 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req: Authent
       return res.status(403).json({ error: 'Only operator accounts can be deleted from this section.' });
     }
 
+    // Applications are intentionally retained. They already contain immutable
+    // creator name, email and block snapshots for historical reporting.
+    const preservedApplicationCount = await database.application.count({ where: { createdById: target.id } });
     await database.passwordResetToken.deleteMany({ where: { email: target.email } });
     await database.user.delete({ where: { id: target.id } });
 
@@ -673,13 +643,13 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req: Authent
       data: {
         entityType: 'USER',
         action: 'DELETE',
-        details: `Deleted operator account ${target.email} mapped to ${target.blockName || 'unassigned'} block. Existing application records were preserved.`,
+        details: `Deleted operator account ${target.email} mapped to ${target.blockName || 'unassigned'} block. Preserved ${preservedApplicationCount} application record(s).`,
         performedBy: req.user?.email || 'admin',
         ipAddress: req.ip
       }
     }).catch(() => {});
 
-    res.json({ success: true, message: `Operator ${target.name} was deleted successfully.` });
+    res.json({ success: true, message: `Operator ${target.name} was deleted. ${preservedApplicationCount} application record(s) remain safely preserved.` });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete operator account.' });
   }
