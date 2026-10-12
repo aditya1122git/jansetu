@@ -4,7 +4,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  recoveryEmail?: string;
   role: UserRole;
   department?: string;
   phone?: string;

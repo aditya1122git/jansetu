@@ -52,7 +52,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   // Admin profile and password state
   const [profileName, setProfileName] = useState(currentUser?.name || '');
   const [profileEmail, setProfileEmail] = useState(currentUser?.email || '');
-  const [profileRecoveryEmail, setProfileRecoveryEmail] = useState(currentUser?.recoveryEmail || currentUser?.email || '');
   const [profilePhone, setProfilePhone] = useState(currentUser?.phone || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -63,6 +62,9 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewAdminPassword, setShowNewAdminPassword] = useState(false);
+  const [showConfirmAdminPassword, setShowConfirmAdminPassword] = useState(false);
 
   // New Category State
   const [newCatName, setNewCatName] = useState('');
@@ -103,7 +105,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   useEffect(() => {
     setProfileName(currentUser?.name || '');
     setProfileEmail(currentUser?.email || '');
-    setProfileRecoveryEmail(currentUser?.recoveryEmail || currentUser?.email || '');
     setProfilePhone(currentUser?.phone || '');
   }, [currentUser]);
 
@@ -134,7 +135,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     setProfileMsg(null);
     setIsSavingProfile(true);
     try {
-      const result = await api.updateAdminProfile({ name: profileName.trim(), email: profileEmail.trim(), recoveryEmail: profileRecoveryEmail.trim(), phone: profilePhone.trim() });
+      const result = await api.updateAdminProfile({ name: profileName.trim(), email: profileEmail.trim(), phone: profilePhone.trim() });
       setProfileMsg({ type: 'success', text: result.message });
       onProfileUpdated?.(result.user);
       setIsEditingProfile(false);
@@ -159,6 +160,9 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       setCurrentPassword('');
       setNewAdminPassword('');
       setConfirmAdminPassword('');
+      setShowCurrentPassword(false);
+      setShowNewAdminPassword(false);
+      setShowConfirmAdminPassword(false);
       setShowChangePassword(false);
     } catch (error: any) {
       setPasswordMsg({ type: 'error', text: error.message || 'Failed to change password.' });
@@ -381,13 +385,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 <div className="space-y-4">
                   <label className="block space-y-1"><span className="font-bold text-gray-700">Admin Name *</span><input required disabled={!isEditingProfile} value={profileName} onChange={event => setProfileName(event.target.value)} className="w-full rounded-xl border border-gray-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-700" /></label>
                   <label className="block space-y-1"><span className="font-bold text-gray-700">Admin Email *</span><input required disabled={!isEditingProfile} type="email" value={profileEmail} onChange={event => setProfileEmail(event.target.value)} className="w-full rounded-xl border border-gray-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-700" /></label>
-                  <label className="block space-y-1"><span className="font-bold text-gray-700">Password Reset Email *</span><input required disabled={!isEditingProfile} type="email" value={profileRecoveryEmail} onChange={event => setProfileRecoveryEmail(event.target.value)} className="w-full rounded-xl border border-gray-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-700" /><span className="block text-[11px] leading-relaxed text-gray-500">Admin forgot-password links will be delivered here. This can be different from the login email.</span></label>
                   <label className="block space-y-1"><span className="font-bold text-gray-700">Phone Number</span><input disabled={!isEditingProfile} inputMode="numeric" maxLength={10} value={profilePhone} onChange={event => setProfilePhone(event.target.value.replace(/\D/g, '').slice(0, 10))} className="w-full rounded-xl border border-gray-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-700" /></label>
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600"><strong>Role:</strong> ADMIN</div>
                   {!isEditingProfile ? (
                     <button type="button" onClick={() => { setProfileMsg(null); setIsEditingProfile(true); }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1C4D8D] px-4 py-2.5 font-bold text-white hover:bg-[#163c6f]"><Edit2 className="h-4 w-4" />Edit Profile</button>
                   ) : (
-                    <div className="flex gap-2"><button type="button" onClick={() => { setProfileName(currentUser?.name || ''); setProfileEmail(currentUser?.email || ''); setProfileRecoveryEmail(currentUser?.recoveryEmail || currentUser?.email || ''); setProfilePhone(currentUser?.phone || ''); setProfileMsg(null); setIsEditingProfile(false); }} className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 font-bold text-gray-700 hover:bg-gray-50">Cancel</button><button type="submit" disabled={isSavingProfile} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#1C4D8D] px-4 py-2.5 font-bold text-white hover:bg-[#163c6f] disabled:opacity-60"><Save className="h-4 w-4" />{isSavingProfile ? 'Saving…' : 'Save Changes'}</button></div>
+                    <div className="flex gap-2"><button type="button" onClick={() => { setProfileName(currentUser?.name || ''); setProfileEmail(currentUser?.email || ''); setProfilePhone(currentUser?.phone || ''); setProfileMsg(null); setIsEditingProfile(false); }} className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 font-bold text-gray-700 hover:bg-gray-50">Cancel</button><button type="submit" disabled={isSavingProfile} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#1C4D8D] px-4 py-2.5 font-bold text-white hover:bg-[#163c6f] disabled:opacity-60"><Save className="h-4 w-4" />{isSavingProfile ? 'Saving…' : 'Save Changes'}</button></div>
                   )}
                 </div>
               </form>
@@ -396,12 +399,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 <div className="mb-5 flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-xl bg-amber-600 text-white"><Lock className="h-5 w-5" /></div><div><h4 className="text-sm font-black text-gray-950">Change Password</h4><p className="text-[11px] text-gray-500">Verify the current password before setting a new one.</p></div></div>
                 {passwordMsg && <div className={`mb-4 flex items-center gap-2 rounded-xl border p-3 font-semibold ${passwordMsg.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-700'}`}>{passwordMsg.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}<span>{passwordMsg.text}</span></div>}
                 <div className="space-y-4">
-                  <label className="block space-y-1"><span className="font-bold text-gray-700">Current Password *</span><input required type="password" autoComplete="current-password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} className="w-full rounded-xl border border-gray-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-amber-200" /></label>
-                  <label className="block space-y-1"><span className="font-bold text-gray-700">New Password *</span><input required minLength={8} type="password" autoComplete="new-password" value={newAdminPassword} onChange={event => setNewAdminPassword(event.target.value)} className="w-full rounded-xl border border-gray-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-amber-200" /></label>
-                  <label className="block space-y-1"><span className="font-bold text-gray-700">Confirm New Password *</span><input required minLength={8} type="password" autoComplete="new-password" value={confirmAdminPassword} onChange={event => setConfirmAdminPassword(event.target.value)} className="w-full rounded-xl border border-gray-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-amber-200" /></label>
+                  <label className="block space-y-1"><span className="font-bold text-gray-700">Current Password *</span><div className="flex items-center rounded-xl border border-gray-300 bg-white px-3 focus-within:ring-2 focus-within:ring-amber-200"><Lock className="h-4 w-4 text-gray-400" /><input required type={showCurrentPassword ? 'text' : 'password'} autoComplete="current-password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} className="min-w-0 flex-1 border-0 px-2 py-2.5 outline-none" /><button type="button" onClick={() => setShowCurrentPassword(value => !value)} className="p-1 text-gray-500 hover:text-amber-700" aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}>{showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></label>
+                  <label className="block space-y-1"><span className="font-bold text-gray-700">New Password *</span><div className="flex items-center rounded-xl border border-gray-300 bg-white px-3 focus-within:ring-2 focus-within:ring-amber-200"><Lock className="h-4 w-4 text-gray-400" /><input required minLength={8} type={showNewAdminPassword ? 'text' : 'password'} autoComplete="new-password" value={newAdminPassword} onChange={event => setNewAdminPassword(event.target.value)} className="min-w-0 flex-1 border-0 px-2 py-2.5 outline-none" /><button type="button" onClick={() => setShowNewAdminPassword(value => !value)} className="p-1 text-gray-500 hover:text-amber-700" aria-label={showNewAdminPassword ? 'Hide new password' : 'Show new password'}>{showNewAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></label>
+                  <label className="block space-y-1"><span className="font-bold text-gray-700">Confirm New Password *</span><div className="flex items-center rounded-xl border border-gray-300 bg-white px-3 focus-within:ring-2 focus-within:ring-amber-200"><Lock className="h-4 w-4 text-gray-400" /><input required minLength={8} type={showConfirmAdminPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmAdminPassword} onChange={event => setConfirmAdminPassword(event.target.value)} className="min-w-0 flex-1 border-0 px-2 py-2.5 outline-none" /><button type="button" onClick={() => setShowConfirmAdminPassword(value => !value)} className="p-1 text-gray-500 hover:text-amber-700" aria-label={showConfirmAdminPassword ? 'Hide confirmation password' : 'Show confirmation password'}>{showConfirmAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></label>
                   <p className="text-[11px] text-gray-500">Use at least 8 characters. Your password is stored as a bcrypt hash.</p>
                   <button type="submit" disabled={isChangingPassword} className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-700 px-4 py-2.5 font-bold text-white hover:bg-amber-800 disabled:opacity-60"><Lock className="h-4 w-4" />{isChangingPassword ? 'Changing…' : 'Change Password'}</button>
-                  <button type="button" onClick={() => { setCurrentPassword(''); setNewAdminPassword(''); setConfirmAdminPassword(''); setPasswordMsg(null); setShowChangePassword(false); }} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 font-bold text-gray-700 hover:bg-gray-50">Cancel</button>
+                  <button type="button" onClick={() => { setCurrentPassword(''); setNewAdminPassword(''); setConfirmAdminPassword(''); setShowCurrentPassword(false); setShowNewAdminPassword(false); setShowConfirmAdminPassword(false); setPasswordMsg(null); setShowChangePassword(false); }} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 font-bold text-gray-700 hover:bg-gray-50">Cancel</button>
                 </div>
               </form> : <section className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-6 text-center shadow-sm"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-amber-600 text-white shadow-lg shadow-amber-100"><Lock className="h-6 w-6" /></div><h4 className="mt-4 text-base font-black text-gray-950">Account Password</h4><p className="mt-2 max-w-xs text-xs leading-relaxed text-gray-500">Change your password securely after verifying the current password.</p><button type="button" onClick={() => { setPasswordMsg(null); setShowChangePassword(true); }} className="mt-5 flex items-center gap-2 rounded-xl bg-amber-700 px-5 py-2.5 font-bold text-white hover:bg-amber-800"><Lock className="h-4 w-4" />Change Password</button></section>}
             </div>

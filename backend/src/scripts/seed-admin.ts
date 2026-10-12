@@ -19,7 +19,6 @@ async function main() {
     data: {
       name: process.env.ADMIN_NAME?.trim() || 'E-Sewak Tarapur Administrator',
       email,
-      recoveryEmail: email,
       password: await bcrypt.hash(password, 12),
       role: 'ADMIN',
       department: 'E-Sewak Tarapur Administration',

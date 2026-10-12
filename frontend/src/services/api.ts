@@ -154,7 +154,7 @@ export const api = {
     return data;
   },
 
-  async updateAdminProfile(payload: { name: string; email: string; recoveryEmail: string; phone?: string }): Promise<{ success: boolean; message: string; user: User; token: string }> {
+  async updateAdminProfile(payload: { name: string; email: string; phone?: string }): Promise<{ success: boolean; message: string; user: User; token: string }> {
     const res = await fetch(`${API_BASE}/auth/profile`, {
       method: 'PUT',
       headers: getHeaders(),

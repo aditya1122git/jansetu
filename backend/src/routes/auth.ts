@@ -199,7 +199,6 @@ router.post('/login', async (req, res) => {
         role: user.role,
         department: user.department,
         phone: user.phone,
-        recoveryEmail: user.recoveryEmail,
         districtName: user.districtName,
         constituencyName: user.constituencyName,
         blockName: user.blockName,
@@ -265,9 +264,7 @@ router.post('/forgot-password', async (req, res) => {
     const forwardedProto = String(req.headers['x-forwarded-proto'] || req.protocol).split(',')[0].trim();
     const appBaseUrl = configuredBaseUrl || `${forwardedProto}://${req.get('host')}`;
     const resetUrl = `${appBaseUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
-    const destinationEmail = user.role === 'ADMIN' && user.recoveryEmail
-      ? String(user.recoveryEmail).trim().toLowerCase()
-      : user.email;
+    const destinationEmail = user.email;
 
     await database.passwordResetToken.deleteMany({ where: { email: user.email } });
     await database.passwordResetToken.create({
@@ -448,7 +445,7 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const user = await database.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, name: true, email: true, recoveryEmail: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true, createdAt: true }
+      select: { id: true, name: true, email: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true, createdAt: true }
     });
     res.json({ user });
   } catch (error: any) {
@@ -461,7 +458,6 @@ router.put('/profile', authenticateToken, requireAdmin, async (req: Authenticate
   try {
     const name = String(req.body?.name || '').trim();
     const email = String(req.body?.email || '').trim().toLowerCase();
-    const recoveryEmail = String(req.body?.recoveryEmail || '').trim().toLowerCase();
     const phone = String(req.body?.phone || '').trim();
 
     if (!name || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -470,10 +466,6 @@ router.put('/profile', authenticateToken, requireAdmin, async (req: Authenticate
     if (phone && !/^\d{10}$/.test(phone)) {
       return res.status(400).json({ error: 'Phone number must contain exactly 10 digits.' });
     }
-    if (!/^\S+@\S+\.\S+$/.test(recoveryEmail)) {
-      return res.status(400).json({ error: 'A valid password reset email address is required.' });
-    }
-
     const emailOwner = await database.user.findUnique({ where: { email } });
     if (emailOwner && emailOwner.id !== req.user?.id) {
       return res.status(400).json({ error: 'This email address is already used by another account.' });
@@ -481,8 +473,8 @@ router.put('/profile', authenticateToken, requireAdmin, async (req: Authenticate
 
     const updated = await database.user.update({
       where: { id: req.user!.id },
-      data: { name, email, recoveryEmail, phone: phone || null },
-      select: { id: true, name: true, email: true, recoveryEmail: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true }
+      data: { name, email, phone: phone || null },
+      select: { id: true, name: true, email: true, role: true, department: true, phone: true, districtName: true, constituencyName: true, blockName: true, blockLgdCode: true, isActive: true }
     });
 
     const token = jwt.sign({
