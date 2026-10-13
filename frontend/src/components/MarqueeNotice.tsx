@@ -15,8 +15,8 @@ export const MarqueeNotice: React.FC<MarqueeNoticeProps> = ({ language }) => {
         </div>
         <div className="whitespace-nowrap animate-marquee text-[#1C4D8D] font-medium text-xs sm:text-sm">
           {language === 'hi'
-            ? 'E-Sewak Tarapur (ई-सेवक तारापुर) — मुंगेर जिले के तारापुर विधानसभा क्षेत्र हेतु आवेदन एवं शिकायत प्रबंधन पोर्टल।'
-            : 'Welcome to E-Sewak Tarapur — Application & Grievance Management Portal for Tarapur Assembly Constituency, Munger.'}
+            ? 'E-Sewa Tarapur (ई-सेवा तारापुर) — मुंगेर जिले के तारापुर विधानसभा क्षेत्र हेतु आवेदन एवं शिकायत प्रबंधन पोर्टल।'
+            : 'Welcome to E-Sewa Tarapur — Application & Grievance Management Portal for Tarapur Assembly Constituency, Munger.'}
         </div>
       </div>
     </div>

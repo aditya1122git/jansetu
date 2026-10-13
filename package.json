@@ -1,7 +1,7 @@
 {
   "name": "jansetu-bihar-portal",
   "version": "2.0.0",
-  "description": "E-Sewak Tarapur — Application & Grievance Management Portal",
+  "description": "E-Sewa Tarapur — Application & Grievance Management Portal",
   "scripts": {
     "install:all": "npm --prefix backend install && npm --prefix frontend install",
     "build:frontend": "npm --prefix frontend run build",

@@ -163,6 +163,19 @@ export interface DistrictStat {
   resolutionRate: number;
 }
 
+export interface BlockStat {
+  blockName: string;
+  blockLgdCode: string;
+  constituencyName: string;
+  districtName: string;
+  totalApplications: number;
+  importantCount: number;
+  normalCount: number;
+  pendingCount: number;
+  completedCount: number;
+  resolutionRate: number;
+}
+
 export interface CategoryStat {
   categoryId: string;
   categoryName: string;

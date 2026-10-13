@@ -26,7 +26,7 @@ import {
   FileSpreadsheet
 } from './icons';
 import { api } from '../services/api';
-import { DashboardStats, DistrictStat, CategoryStat } from '../types';
+import { DashboardStats, BlockStat, CategoryStat } from '../types';
 import './AnalyticsModal.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, Title);
@@ -45,13 +45,13 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   pageMode = false
 }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [districtStats, setDistrictStats] = useState<DistrictStat[]>([]);
+  const [blockStats, setBlockStats] = useState<BlockStat[]>([]);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [ageingReport, setAgeingReport] = useState<any>(null);
   const [workloadReport, setWorkloadReport] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeReportTab, setActiveReportTab] = useState<'districts' | 'categories' | 'ageing' | 'workload'>('districts');
-  const [districtSearch, setDistrictSearch] = useState('');
+  const [activeReportTab, setActiveReportTab] = useState<'blocks' | 'categories' | 'ageing' | 'workload'>('blocks');
+  const [blockSearch, setBlockSearch] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -64,13 +64,13 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
     try {
       const [s, d, c, a, w] = await Promise.all([
         api.getDashboardStats(),
-        api.getDistrictReports(),
+        api.getBlockReports(),
         api.getCategoryReports(),
         api.getAgeingReport(),
         api.getEmployeeWorkload()
       ]);
       setStats(s);
-      setDistrictStats(d.districts);
+      setBlockStats(d.blocks);
       setCategoryStats(c.categories);
       setAgeingReport(a);
       setWorkloadReport(w.workload);
@@ -81,9 +81,9 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
     }
   };
 
-  const filteredDistricts = districtStats.filter(d =>
-    d.districtName.toLowerCase().includes(districtSearch.toLowerCase()) ||
-    d.districtCode.toLowerCase().includes(districtSearch.toLowerCase())
+  const filteredBlocks = blockStats.filter(block =>
+    block.blockName.toLowerCase().includes(blockSearch.toLowerCase()) ||
+    block.blockLgdCode.includes(blockSearch)
   );
 
   const statusChartData = {
@@ -103,16 +103,14 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
     }]
   };
 
-  const districtChartData = {
-    labels: [...districtStats]
+  const blockChartData = {
+    labels: [...blockStats]
       .sort((a, b) => b.totalApplications - a.totalApplications)
-      .slice(0, 10)
-      .map(item => item.districtName),
+      .map(item => item.blockName),
     datasets: [{
       label: 'Applications',
-      data: [...districtStats]
+      data: [...blockStats]
         .sort((a, b) => b.totalApplications - a.totalApplications)
-        .slice(0, 10)
         .map(item => item.totalApplications),
       backgroundColor: '#1d619b',
       borderRadius: 7,
@@ -143,8 +141,8 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
               </h3>
               <p className="text-xs text-blue-200">
                 {language === 'hi'
-                  ? '38 जिले, 243 निर्वाचन क्षेत्र एवं श्रेणीवार वास्तविक डेटाबेस सांख्यिकी'
-                  : 'Database Statistics Across 38 Districts, 243 Constituencies & 14 Sectors'}
+                  ? 'तारापुर विधानसभा क्षेत्र के 5 प्रखंडों की वास्तविक आवेदन सांख्यिकी'
+                  : 'Live application statistics for Tarapur Constituency and its 5 blocks'}
               </p>
             </div>
           </div>
@@ -225,13 +223,13 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
           <article className="analytics-chart-card analytics-chart-card--wide">
             <div className="analytics-chart-heading">
               <div>
-                <span>District performance</span>
-                <h4>Top districts by applications</h4>
+                <span>Block performance</span>
+                <h4>Applications across Tarapur blocks</h4>
               </div>
               <BarChart3 />
             </div>
             <div className="analytics-chart-canvas">
-              <Bar data={districtChartData} options={{ ...chartOptions, scales: { y: { beginAtZero: true, grid: { color: '#eef2f7' } }, x: { grid: { display: false } } } }} />
+              <Bar data={blockChartData} options={{ ...chartOptions, scales: { y: { beginAtZero: true, grid: { color: '#eef2f7' } }, x: { grid: { display: false } } } }} />
             </div>
           </article>
 
@@ -253,15 +251,15 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
         <div className="bg-white border-b px-6 pt-3 flex items-center justify-between text-xs flex-shrink-0">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setActiveReportTab('districts')}
+              onClick={() => setActiveReportTab('blocks')}
               className={`pb-2 px-3 font-bold border-b-2 transition flex items-center gap-1.5 ${
-                activeReportTab === 'districts'
+                activeReportTab === 'blocks'
                   ? 'border-[#C35504] text-[#C35504]'
                   : 'border-transparent text-gray-500 hover:text-gray-800'
               }`}
             >
               <MapPin className="w-3.5 h-3.5" />
-              <span>District-Wise Breakdown (All 38)</span>
+              <span>Block-Wise Breakdown (Tarapur)</span>
             </button>
 
             <button
@@ -273,7 +271,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>Complaint Categories (14 Sectors)</span>
+              <span>Complaint Categories</span>
             </button>
 
             <button
@@ -312,19 +310,19 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
 
         {/* Tab Content */}
         <div className="p-6 overflow-y-auto flex-grow text-xs">
-          {/* TAB 1: District-Wise */}
-          {activeReportTab === 'districts' && (
+          {/* TAB 1: Block-Wise */}
+          {activeReportTab === 'blocks' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <input
                   type="text"
-                  placeholder="Filter by district name or code..."
-                  value={districtSearch}
-                  onChange={(e) => setDistrictSearch(e.target.value)}
+                  placeholder="Filter by block name or LGD code..."
+                  value={blockSearch}
+                  onChange={(e) => setBlockSearch(e.target.value)}
                   className="w-72 border border-gray-300 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#1C4D8D]"
                 />
                 <div className="text-gray-500 font-medium">
-                  Showing <strong>{filteredDistricts.length}</strong> of 38 Bihar Districts
+                  Showing <strong>{filteredBlocks.length}</strong> of 5 Tarapur Blocks
                 </div>
               </div>
 
@@ -332,9 +330,9 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                 <table className="w-full text-left">
                   <thead className="bg-gray-100 text-gray-700 uppercase font-bold border-b">
                     <tr>
-                      <th className="py-2.5 px-3">District Code</th>
-                      <th className="py-2.5 px-3">District Name</th>
-                      <th className="py-2.5 px-3 text-center">Assembly Seats</th>
+                      <th className="py-2.5 px-3">LGD Code</th>
+                      <th className="py-2.5 px-3">Block Name</th>
+                      <th className="py-2.5 px-3">Constituency</th>
                       <th className="py-2.5 px-3 text-center">Total Applications</th>
                       <th className="py-2.5 px-3 text-center">Important</th>
                       <th className="py-2.5 px-3 text-center">Normal</th>
@@ -344,21 +342,21 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredDistricts.map((d) => (
-                      <tr key={d.districtId} className="hover:bg-blue-50/40">
-                        <td className="py-2.5 px-3 font-mono font-bold text-gray-600">{d.districtCode}</td>
-                        <td className="py-2.5 px-3 font-bold text-[#1C4D8D]">{d.districtName}</td>
-                        <td className="py-2.5 px-3 text-center font-semibold">{d.totalSeats} ACs</td>
-                        <td className="py-2.5 px-3 text-center font-bold text-gray-900">{d.totalApplications}</td>
-                        <td className="py-2.5 px-3 text-center font-semibold text-red-600">{d.importantCount}</td>
-                        <td className="py-2.5 px-3 text-center font-semibold text-blue-600">{d.normalCount}</td>
-                        <td className="py-2.5 px-3 text-center font-semibold text-amber-600">{d.pendingCount}</td>
-                        <td className="py-2.5 px-3 text-center font-semibold text-emerald-600">{d.completedCount}</td>
+                    {filteredBlocks.map((block) => (
+                      <tr key={block.blockLgdCode} className="hover:bg-blue-50/40">
+                        <td className="py-2.5 px-3 font-mono font-bold text-gray-600">{block.blockLgdCode}</td>
+                        <td className="py-2.5 px-3 font-bold text-[#1C4D8D]">{block.blockName}</td>
+                        <td className="py-2.5 px-3 font-semibold">{block.constituencyName}</td>
+                        <td className="py-2.5 px-3 text-center font-bold text-gray-900">{block.totalApplications}</td>
+                        <td className="py-2.5 px-3 text-center font-semibold text-red-600">{block.importantCount}</td>
+                        <td className="py-2.5 px-3 text-center font-semibold text-blue-600">{block.normalCount}</td>
+                        <td className="py-2.5 px-3 text-center font-semibold text-amber-600">{block.pendingCount}</td>
+                        <td className="py-2.5 px-3 text-center font-semibold text-emerald-600">{block.completedCount}</td>
                         <td className="py-2.5 px-3 text-right">
                           <span className={`font-bold px-2 py-0.5 rounded ${
-                            d.resolutionRate >= 50 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                            block.resolutionRate >= 50 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
                           }`}>
-                            {d.resolutionRate}%
+                            {block.resolutionRate}%
                           </span>
                         </td>
                       </tr>

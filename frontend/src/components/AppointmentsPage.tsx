@@ -1,5 +1,5 @@
 import React, { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Calendar, CheckCircle, Clock, MapPin, Phone, Shield, User as UserIcon } from './icons';
+import { Calendar, CheckCircle, ChevronLeft, Clock, Eye, MapPin, Phone, Shield, User as UserIcon } from './icons';
 import { api } from '../services/api';
 import { Appointment, User } from '../types';
 // The stylesheet is handled by the bundler and has no TypeScript module declaration.
@@ -60,8 +60,9 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ currentUser 
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [decisionTarget, setDecisionTarget] = useState<Appointment | null>(null);
-  const [decisionMode, setDecisionMode] = useState<'approve' | 'reject'>('approve');
+  const [decisionMode, setDecisionMode] = useState<'approve' | 'reject' | 'reschedule'>('approve');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentHour, setAppointmentHour] = useState('');
   const [appointmentMinute, setAppointmentMinute] = useState('');
@@ -84,7 +85,12 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ currentUser 
 
   useEffect(() => {
     void loadAppointments();
-    const unsubscribe = api.subscribeToAppointmentEvents(() => void loadAppointments(true));
+    const unsubscribe = api.subscribeToAppointmentEvents((event) => {
+      void loadAppointments(true);
+      if (!isAdmin && event.action === 'rescheduled') {
+        setSuccess(`Appointment rescheduled: ${event.visitorName || 'Visitor'} — ${event.appointmentDate || 'updated date'} at ${formatAppointmentTime(event.appointmentTime)}.`);
+      }
+    });
     const refreshOnFocus = () => void loadAppointments(true);
     window.addEventListener('focus', refreshOnFocus);
     return () => {
@@ -99,6 +105,7 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ currentUser 
     confirmed: appointments.filter(item => item.status === 'CONFIRMED').length,
     rejected: appointments.filter(item => item.status === 'REJECTED').length
   }), [appointments]);
+  const detailAppointment = detailId ? appointments.find(item => item.id === detailId) || null : null;
 
   const submitVisitor = async (event: FormEvent) => {
     event.preventDefault();
@@ -126,14 +133,15 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ currentUser 
     setSuccess('');
     setSubmitting(true);
     try {
-      const savedAppointmentTime = decisionMode === 'approve'
+      const isScheduling = decisionMode !== 'reject';
+      const savedAppointmentTime = isScheduling
         ? toTwentyFourHourTime(appointmentHour, appointmentMinute, appointmentPeriod)
         : undefined;
-      await api.decideAppointment(decisionTarget.id, decisionMode === 'approve'
-        ? { decision: 'APPROVE', appointmentDate, appointmentTime: savedAppointmentTime }
+      await api.decideAppointment(decisionTarget.id, isScheduling
+        ? { decision: decisionMode === 'reschedule' ? 'RESCHEDULE' : 'APPROVE', appointmentDate, appointmentTime: savedAppointmentTime }
         : { decision: 'REJECT' });
-      setSuccess(decisionMode === 'approve'
-        ? `Appointment confirmed for ${appointmentDate} at ${appointmentHour}:${appointmentMinute} ${appointmentPeriod}.`
+      setSuccess(isScheduling
+        ? `Appointment ${decisionMode === 'reschedule' ? 'rescheduled' : 'confirmed'} for ${appointmentDate} at ${appointmentHour}:${appointmentMinute} ${appointmentPeriod}.`
         : 'Appointment request rejected.');
       setDecisionTarget(null);
       setAppointmentDate('');
@@ -148,15 +156,56 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ currentUser 
     }
   };
 
-  const openDecision = (appointment: Appointment, mode: 'approve' | 'reject') => {
+  const openDecision = (appointment: Appointment, mode: 'approve' | 'reject' | 'reschedule') => {
     setDecisionTarget(appointment);
     setDecisionMode(mode);
-    setAppointmentDate('');
-    setAppointmentHour('');
-    setAppointmentMinute('');
-    setAppointmentPeriod('AM');
+    if (mode === 'reschedule' && appointment.appointmentDate && appointment.appointmentTime) {
+      const [hourText, minute] = appointment.appointmentTime.split(':');
+      const hour = Number(hourText);
+      setAppointmentDate(appointment.appointmentDate);
+      setAppointmentHour(String(hour % 12 || 12).padStart(2, '0'));
+      setAppointmentMinute(minute);
+      setAppointmentPeriod(hour >= 12 ? 'PM' : 'AM');
+    } else {
+      setAppointmentDate('');
+      setAppointmentHour('');
+      setAppointmentMinute('');
+      setAppointmentPeriod('AM');
+    }
     setError('');
   };
+
+  if (detailAppointment) {
+    return (
+      <section className="appointments-page appointment-detail-page min-h-[60vh] bg-[#f4f7fb] px-4 py-7">
+        <div className="mx-auto max-w-7xl space-y-5">
+          <button type="button" className="appointment-detail-back" onClick={() => setDetailId(null)}><ChevronLeft /> Back to appointments</button>
+          <header className="appointment-detail-hero">
+            <div><p>Appointment details</p><h1>{detailAppointment.visitorName}</h1><span>Complete visitor request and scheduling information</span></div>
+            <span className={`appointment-detail-status ${statusStyles[detailAppointment.status]}`}>{detailAppointment.status}</span>
+          </header>
+          <div className="appointment-detail-grid">
+            <article className="appointment-detail-card">
+              <h2><UserIcon /> Visitor information</h2>
+              <dl><div><dt>Name</dt><dd>{detailAppointment.visitorName}</dd></div><div><dt>Phone</dt><dd>{detailAppointment.phone}</dd></div><div className="is-wide"><dt>Address</dt><dd>{detailAppointment.address}</dd></div><div className="is-wide"><dt>Purpose of visit</dt><dd>{detailAppointment.purpose}</dd></div></dl>
+            </article>
+            <article className="appointment-detail-card">
+              <h2><Shield /> Operator information</h2>
+              <dl><div><dt>Name</dt><dd>{detailAppointment.operatorName}</dd></div><div><dt>Email</dt><dd>{detailAppointment.operatorEmail}</dd></div><div><dt>Block</dt><dd>{detailAppointment.operatorBlockName || 'Not assigned'}</dd></div><div><dt>Block LGD code</dt><dd>{detailAppointment.operatorBlockLgdCode || '—'}</dd></div></dl>
+            </article>
+            <article className="appointment-detail-card">
+              <h2><Clock /> Request timeline</h2>
+              <dl><div><dt>Submitted date</dt><dd>{formatSubmittedDate(detailAppointment.createdAt)}</dd></div><div><dt>Submitted time</dt><dd>{formatSubmittedTime(detailAppointment.createdAt)}</dd></div><div><dt>Last updated</dt><dd>{formatSubmittedDate(detailAppointment.updatedAt)}, {formatSubmittedTime(detailAppointment.updatedAt)}</dd></div><div><dt>Decision by</dt><dd>{detailAppointment.decidedByName || 'Pending'}</dd></div></dl>
+            </article>
+            <article className="appointment-detail-card appointment-schedule-card">
+              <h2><Calendar /> Meeting schedule</h2>
+              {detailAppointment.status === 'CONFIRMED' ? <dl><div><dt>Meeting date</dt><dd>{detailAppointment.appointmentDate}</dd></div><div><dt>Meeting time</dt><dd>{formatAppointmentTime(detailAppointment.appointmentTime)}</dd></div>{detailAppointment.decidedAt && <div className="is-wide"><dt>Schedule updated</dt><dd>{formatSubmittedDate(detailAppointment.decidedAt)}, {formatSubmittedTime(detailAppointment.decidedAt)}</dd></div>}</dl> : <p className="appointment-detail-empty">{detailAppointment.status === 'PENDING' ? 'The administrator has not scheduled this request yet.' : 'This appointment request was rejected.'}</p>}
+            </article>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="appointments-page min-h-[60vh] bg-[#f4f7fb] px-4 py-7">
@@ -193,18 +242,15 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ currentUser 
           {loading ? <div className="p-12 text-center text-sm font-semibold text-slate-500">Loading appointments...</div> : appointments.length === 0 ? <div className="p-12 text-center"><Calendar className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-3 font-bold text-slate-700">No appointment requests found</p><p className="text-xs text-slate-500">{isAdmin ? 'New operator requests will appear here.' : 'Register the first visitor using the form above.'}</p></div> : (
             <div className="appointment-table-wrap">
               <table className="appointment-table">
-                <thead><tr><th>Visitor</th><th>Address</th><th>Purpose</th><th>Operator / Block</th><th>Submitted Date</th><th>Submitted Time</th><th>Appointment</th><th>Status</th>{isAdmin && <th>Action</th>}</tr></thead>
+                <thead><tr><th>Visitor</th>{isAdmin && <th>Operator / Block</th>}<th>Submitted</th><th>Schedule</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                   {appointments.map(item => <tr key={item.id}>
                     <td><strong>{item.visitorName}</strong><span className="appointment-cell-detail"><Phone className="h-3 w-3" />{item.phone}</span></td>
-                    <td><span className="appointment-cell-detail"><MapPin className="h-3 w-3" />{item.address}</span></td>
-                    <td className="appointment-purpose-cell">{item.purpose}</td>
-                    <td><strong>{item.operatorName}</strong><span className="appointment-cell-muted">{item.operatorBlockName || 'Block not assigned'}{item.operatorBlockLgdCode ? ` · LGD ${item.operatorBlockLgdCode}` : ''}</span></td>
-                    <td className="appointment-nowrap">{formatSubmittedDate(item.createdAt)}</td>
-                    <td className="appointment-nowrap">{formatSubmittedTime(item.createdAt)}</td>
+                    {isAdmin && <td><strong>{item.operatorName}</strong><span className="appointment-cell-muted">{item.operatorBlockName || 'Block not assigned'}{item.operatorBlockLgdCode ? ` · LGD ${item.operatorBlockLgdCode}` : ''}</span></td>}
+                    <td className="appointment-nowrap">{formatSubmittedDate(item.createdAt)}<span className="appointment-cell-muted">{formatSubmittedTime(item.createdAt)}</span></td>
                     <td>{item.status === 'CONFIRMED' ? <span className="appointment-schedule"><Calendar className="h-3 w-3" />{item.appointmentDate}<Clock className="h-3 w-3" />{formatAppointmentTime(item.appointmentTime)}</span> : <span className="appointment-cell-muted">Not scheduled</span>}</td>
                     <td><span className={`rounded-full border px-3 py-1 text-[10px] font-black ${statusStyles[item.status]}`}>{item.status}</span></td>
-                    {isAdmin && <td>{item.status === 'PENDING' ? <div className="appointment-table-actions"><button onClick={() => openDecision(item, 'approve')} className="appointment-approve">Approve</button><button onClick={() => openDecision(item, 'reject')} className="appointment-reject">Reject</button></div> : <span className="appointment-cell-muted">Completed</span>}</td>}
+                    <td><div className="appointment-table-actions"><button type="button" onClick={() => setDetailId(item.id)} className="appointment-view" title="View full appointment details"><Eye /> View</button>{isAdmin && item.status === 'PENDING' && <><button type="button" onClick={() => openDecision(item, 'approve')} className="appointment-approve">Approve</button><button type="button" onClick={() => openDecision(item, 'reject')} className="appointment-reject">Reject</button></>}{isAdmin && item.status === 'CONFIRMED' && <button type="button" onClick={() => openDecision(item, 'reschedule')} className="appointment-reschedule"><Clock /> Reschedule</button>}</div></td>
                   </tr>)}
                 </tbody>
               </table>
@@ -215,9 +261,9 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ currentUser 
 
       {decisionTarget && <div className="appointment-modal-overlay fixed inset-0 grid place-items-center p-4" role="dialog" aria-modal="true">
         <div className="appointment-decision-card w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-          <div className={`appointment-decision-header ${decisionMode === 'approve' ? 'is-approve' : 'is-reject'}`}><span className="appointment-decision-icon">{decisionMode === 'approve' ? <CheckCircle /> : <Shield />}</span><div><p className="appointment-decision-eyebrow">Visitor request</p><h3>{decisionMode === 'approve' ? 'Schedule Meeting' : 'Reject Appointment?'}</h3><span>Visitor: {decisionTarget.visitorName}</span></div></div>
-          <div className="appointment-decision-body">{decisionMode === 'approve' ? <><p className="appointment-decision-copy">Choose the confirmed meeting date and time. The assigned operator will see the updated schedule immediately.</p><div className="appointment-decision-fields"><label><span>Date *</span><input type="date" min={todayLocal()} required value={appointmentDate} onChange={event => setAppointmentDate(event.target.value)} /></label><label><span>Time (12-hour) *</span><div className="appointment-time-input"><select required value={appointmentHour} onChange={event => setAppointmentHour(event.target.value)} aria-label="Appointment hour"><option value="">H</option>{appointmentHours.map(hour => <option key={hour} value={hour}>{hour}</option>)}</select><select required value={appointmentMinute} onChange={event => setAppointmentMinute(event.target.value)} aria-label="Appointment minute"><option value="">M</option>{appointmentMinutes.map(minute => <option key={minute} value={minute}>{minute}</option>)}</select><select value={appointmentPeriod} onChange={event => setAppointmentPeriod(event.target.value as 'AM' | 'PM')} aria-label="AM or PM"><option value="AM">AM</option><option value="PM">PM</option></select></div></label></div></> : <p className="appointment-reject-notice">This will mark the visitor request as rejected. The operator will see the updated status.</p>}
-            <div className="appointment-decision-actions"><button type="button" onClick={() => setDecisionTarget(null)} className="appointment-cancel-button">Cancel</button><button type="button" disabled={submitting || (decisionMode === 'approve' && (!appointmentDate || !appointmentHour || !appointmentMinute))} onClick={() => void submitDecision()} className={`appointment-confirm-button ${decisionMode === 'approve' ? 'is-approve' : 'is-reject'}`}>{submitting ? 'Saving...' : decisionMode === 'approve' ? 'Confirm Schedule' : 'Reject Request'}</button></div>
+          <div className={`appointment-decision-header ${decisionMode !== 'reject' ? 'is-approve' : 'is-reject'}`}><span className="appointment-decision-icon">{decisionMode !== 'reject' ? <CheckCircle /> : <Shield />}</span><div><p className="appointment-decision-eyebrow">Visitor request</p><h3>{decisionMode === 'approve' ? 'Schedule Meeting' : decisionMode === 'reschedule' ? 'Reschedule Meeting' : 'Reject Appointment?'}</h3><span>Visitor: {decisionTarget.visitorName}</span></div></div>
+          <div className="appointment-decision-body">{decisionMode !== 'reject' ? <><p className="appointment-decision-copy">{decisionMode === 'reschedule' ? 'Select a new meeting date and time. The operator will receive the updated schedule immediately.' : 'Choose the confirmed meeting date and time. The assigned operator will see the updated schedule immediately.'}</p><div className="appointment-decision-fields"><label><span>Date *</span><input type="date" min={todayLocal()} required value={appointmentDate} onChange={event => setAppointmentDate(event.target.value)} /></label><label><span>Time (12-hour) *</span><div className="appointment-time-input"><select required value={appointmentHour} onChange={event => setAppointmentHour(event.target.value)} aria-label="Appointment hour"><option value="">Hour</option>{appointmentHours.map(hour => <option key={hour} value={hour}>{hour}</option>)}</select><select required value={appointmentMinute} onChange={event => setAppointmentMinute(event.target.value)} aria-label="Appointment minute"><option value="">Minute</option>{appointmentMinutes.map(minute => <option key={minute} value={minute}>{minute}</option>)}</select><select value={appointmentPeriod} onChange={event => setAppointmentPeriod(event.target.value as 'AM' | 'PM')} aria-label="AM or PM"><option value="AM">AM</option><option value="PM">PM</option></select></div></label></div></> : <p className="appointment-reject-notice">This will mark the visitor request as rejected. The operator will see the updated status.</p>}
+            <div className="appointment-decision-actions"><button type="button" onClick={() => setDecisionTarget(null)} className="appointment-cancel-button">Cancel</button><button type="button" disabled={submitting || (decisionMode !== 'reject' && (!appointmentDate || !appointmentHour || !appointmentMinute))} onClick={() => void submitDecision()} className={`appointment-confirm-button ${decisionMode !== 'reject' ? 'is-approve' : 'is-reject'}`}>{submitting ? 'Saving...' : decisionMode === 'approve' ? 'Confirm Schedule' : decisionMode === 'reschedule' ? 'Save New Schedule' : 'Reject Request'}</button></div>
           </div>
         </div>
       </div>}

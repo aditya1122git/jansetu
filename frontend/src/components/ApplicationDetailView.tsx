@@ -232,7 +232,7 @@ Assigned Officer: ${app.assignedEmployee || 'Unassigned'}
 Internal Remarks: ${app.internalRemarks || 'None'}
 
 Report Generated: ${new Date().toLocaleString()}
-Portal: E-Sewak Tarapur (Application & Grievance Management Portal)
+Portal: E-Sewa Tarapur (Application & Grievance Management Portal)
 ==================================================`;
 
     const blob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
@@ -398,7 +398,7 @@ Portal: E-Sewak Tarapur (Application & Grievance Management Portal)
             </button>
             <div className="h-4 w-px bg-gray-300 hidden sm:block" />
             <nav className="hidden sm:flex items-center gap-2 text-xs text-gray-500 font-medium">
-              <span className="hover:text-gray-800 cursor-pointer" onClick={onBack}>E-Sewak Tarapur</span>
+              <span className="hover:text-gray-800 cursor-pointer" onClick={onBack}>E-Sewa Tarapur</span>
               <span>&rsaquo;</span>
               <span className="hover:text-gray-800 cursor-pointer" onClick={onBack}>
                 {language === 'hi' ? 'आवेदन' : 'Applications'}

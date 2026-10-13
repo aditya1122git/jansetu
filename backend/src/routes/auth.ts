@@ -278,11 +278,11 @@ router.post('/forgot-password', async (req, res) => {
 
     try {
       await mailer.sendMail({
-        from: process.env.SMTP_FROM?.trim() || `E-Sewak Tarapur <${process.env.SMTP_USER}>`,
+        from: process.env.SMTP_FROM?.trim() || `E-Sewa Tarapur <${process.env.SMTP_USER}>`,
         to: destinationEmail,
-        subject: 'Reset your E-Sewak Tarapur password',
+        subject: 'Reset your E-Sewa Tarapur password',
         text: `Hello ${user.name},\n\nOpen this secure link to create a new password:\n${resetUrl}\n\nThis one-time link expires in 30 minutes. If you did not request this, you can ignore this email.`,
-        html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#172033"><h2 style="color:#1c4d8d">E-Sewak Tarapur</h2><p>Hello ${String(user.name).replace(/[<>&"']/g, '')},</p><p>Use the secure button below to create a new password.</p><p style="margin:28px 0"><a href="${resetUrl}" style="display:inline-block;padding:13px 22px;border-radius:10px;background:#1c4d8d;color:#fff;text-decoration:none;font-weight:700">Create New Password</a></p><p style="color:#64748b">This one-time link expires in 30 minutes and becomes invalid immediately after your password is changed.</p><p style="color:#64748b">If you did not request this, ignore this email.</p></div>`
+        html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#172033"><h2 style="color:#1c4d8d">E-Sewa Tarapur</h2><p>Hello ${String(user.name).replace(/[<>&"']/g, '')},</p><p>Use the secure button below to create a new password.</p><p style="margin:28px 0"><a href="${resetUrl}" style="display:inline-block;padding:13px 22px;border-radius:10px;background:#1c4d8d;color:#fff;text-decoration:none;font-weight:700">Create New Password</a></p><p style="color:#64748b">This one-time link expires in 30 minutes and becomes invalid immediately after your password is changed.</p><p style="color:#64748b">If you did not request this, ignore this email.</p></div>`
       });
     } catch (mailError) {
       await database.passwordResetToken.deleteMany({ where: { email: user.email } });
@@ -565,7 +565,7 @@ router.post('/users', authenticateToken, requireAdmin, async (req: Authenticated
       return res.status(400).json({ error: 'Password and confirm password do not match.' });
     }
 
-    const tarapurBlocks: Record<string, string> = { Asarganj: '2451', Sangrampur: '2457', Tarapur: '2458' };
+    const tarapurBlocks: Record<string, string> = { Asarganj: '2451', Sangrampur: '2457', Tarapur: '2458', 'Tetiha Bambar': '1877', 'Haveli Kharagpur': '1872' };
     if (role === 'DATA_ENTRY' && (!blockName || tarapurBlocks[blockName] !== String(blockLgdCode))) {
       return res.status(400).json({ error: 'Select a valid Tarapur block and LGD code.' });
     }

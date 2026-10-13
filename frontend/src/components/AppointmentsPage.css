@@ -68,7 +68,7 @@
 }
 
 .appointment-table-wrap { width: 100%; overflow-x: auto; }
-.appointment-table { width: 100%; min-width: 1180px; border-collapse: collapse; background: #fff; }
+.appointment-table { width: 100%; min-width: 820px; border-collapse: collapse; background: #fff; }
 .appointment-table th {
   padding: 13px 14px;
   border-bottom: 1px solid #dbe3ed;
@@ -93,16 +93,62 @@
 .appointment-table td strong { display: block; color: #102a4c; font-size: 12px; font-weight: 800; }
 .appointment-cell-detail { display: flex; align-items: flex-start; gap: 6px; margin-top: 5px; color: #64748b; }
 .appointment-cell-muted { display: block; margin-top: 4px; color: #7b8798; font-size: 11px; }
-.appointment-purpose-cell { min-width: 210px; max-width: 310px; line-height: 1.55; }
 .appointment-nowrap { white-space: nowrap; font-weight: 600; }
 .appointment-schedule { display: inline-grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 7px; min-width: 120px; color: #047857; font-size: 11px; font-weight: 800; }
-.appointment-table-actions { display: flex; gap: 7px; }
+.appointment-table-actions { display: flex; flex-wrap: wrap; gap: 7px; min-width: 92px; }
+.appointment-view,
+.appointment-reschedule,
 .appointment-approve,
-.appointment-reject { padding: 7px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.appointment-reject { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.appointment-view { border: 1px solid #bfdbfe; color: #1d4ed8; background: #eff6ff; }
+.appointment-view:hover { background: #dbeafe; }
 .appointment-approve { color: #fff; background: #047857; }
 .appointment-approve:hover { background: #065f46; }
 .appointment-reject { border: 1px solid #fecaca; color: #b91c1c; background: #fef2f2; }
 .appointment-reject:hover { background: #fee2e2; }
+.appointment-reschedule { border: 1px solid #fde68a; color: #92400e; background: #fffbeb; }
+.appointment-reschedule:hover { background: #fef3c7; }
+
+.appointment-detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  color: #334155;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 5px 15px rgba(15, 23, 42, .05);
+}
+.appointment-detail-back:hover { color: #1d4ed8; border-color: #93c5fd; background: #eff6ff; }
+.appointment-detail-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px 28px;
+  border-radius: 20px;
+  color: #fff;
+  background: linear-gradient(120deg, #0b2f55, #1f659e);
+  box-shadow: 0 18px 42px rgba(15, 54, 94, .18);
+}
+.appointment-detail-hero p { margin: 0 0 4px; color: #bfdbfe; font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.appointment-detail-hero h1 { margin: 0; color: #fff; font-size: clamp(22px, 3vw, 30px); font-weight: 900; }
+.appointment-detail-hero div > span { display: block; margin-top: 5px; color: #dbeafe; font-size: 12px; }
+.appointment-detail-status { flex: 0 0 auto; padding: 8px 13px; border-radius: 999px; font-size: 10px; font-weight: 900; letter-spacing: .05em; }
+.appointment-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.appointment-detail-card { padding: 22px; border: 1px solid #dbe3ed; border-radius: 18px; background: #fff; box-shadow: 0 10px 28px rgba(15, 23, 42, .06); }
+.appointment-detail-card h2 { display: flex; align-items: center; gap: 9px; margin: 0 0 18px; padding-bottom: 13px; border-bottom: 1px solid #e8edf3; color: #102a4c; font-size: 15px; font-weight: 900; }
+.appointment-detail-card h2 > span { color: #1d4ed8; }
+.appointment-detail-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; }
+.appointment-detail-card dl > div { min-width: 0; }
+.appointment-detail-card dl > div.is-wide { grid-column: 1 / -1; }
+.appointment-detail-card dt { color: #718096; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.appointment-detail-card dd { margin: 5px 0 0; overflow-wrap: anywhere; color: #1e293b; font-size: 13px; font-weight: 700; line-height: 1.55; }
+.appointment-schedule-card { border-color: #a7f3d0; background: linear-gradient(145deg, #fff, #f0fdf4); }
+.appointment-detail-empty { margin: 0; color: #64748b; font-size: 13px; line-height: 1.65; }
 
 .appointment-modal-overlay {
   position: fixed !important;
@@ -280,6 +326,7 @@
 
 @media (max-width: 899px) {
   .appointment-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .appointment-detail-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 575px) {
@@ -293,4 +340,8 @@
   .appointment-decision-fields { grid-template-columns: 1fr; }
   .appointment-decision-actions { flex-direction: column-reverse; }
   .appointment-cancel-button, .appointment-confirm-button { width: 100%; }
+  .appointment-detail-hero { align-items: flex-start; flex-direction: column; padding: 22px; }
+  .appointment-detail-card { padding: 18px; }
+  .appointment-detail-card dl { grid-template-columns: 1fr; }
+  .appointment-detail-card dl > div.is-wide { grid-column: auto; }
 }

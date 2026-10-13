@@ -109,8 +109,8 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
       return res.status(400).json({ error: 'Valid 10-digit mobile number is required.' });
     }
 
-    // 2. E-Sewak Tarapur serves one fixed constituency with three verified blocks.
-    const tarapurBlocks: Record<string, string> = { Asarganj: '2451', Sangrampur: '2457', Tarapur: '2458' };
+    // 2. E-Sewa Tarapur serves one fixed constituency with five verified blocks.
+    const tarapurBlocks: Record<string, string> = { Asarganj: '2451', Sangrampur: '2457', Tarapur: '2458', 'Tetiha Bambar': '1877', 'Haveli Kharagpur': '1872' };
     if (tarapurBlocks[blockName] !== String(blockLgdCode)) {
       return res.status(400).json({ error: 'Invalid Tarapur block or LGD Block Panchayat Code.' });
     }
@@ -204,7 +204,7 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
         documents: documents ? (typeof documents === 'string' ? documents : JSON.stringify(documents)) : null,
         dateReceived: receivedDateObj,
         nextFollowUpDate: defaultFollowUp,
-        lastActionTaken: 'Application registered in E-Sewak Tarapur portal',
+        lastActionTaken: 'Application registered in E-Sewa Tarapur portal',
         createdById: req.user?.id,
         createdByName: req.user?.name,
         createdByEmail: req.user?.email

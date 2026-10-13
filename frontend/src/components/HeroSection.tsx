@@ -19,7 +19,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenSection, languag
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-bold text-amber-300 mb-4 border border-white/10">
             <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span>E-Sewak Tarapur • {language === 'hi' ? 'आवेदन एवं शिकायत प्रबंधन पोर्टल' : 'Application Management'}</span>
+            <span>E-Sewa Tarapur • {language === 'hi' ? 'आवेदन एवं शिकायत प्रबंधन पोर्टल' : 'Application Management'}</span>
           </div>
 
           {/* Headings */}
@@ -30,8 +30,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenSection, languag
           {/* Description */}
           <p className="text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal mb-8 text-justify sm:text-left">
             {language === 'hi'
-              ? 'E-Sewak Tarapur एक व्यवस्थित आवेदन एवं शिकायत प्रबंधन पोर्टल है, जहाँ प्राप्त आवेदनों का रिकॉर्ड, उनकी प्राथमिकता, वर्तमान स्थिति और आगे की कार्रवाई को एक ही स्थान पर व्यवस्थित किया जा सकता है।'
-              : 'E-Sewak Tarapur brings applications, records, follow-ups and progress tracking together in one organized platform. Find the information you need, monitor application status and keep every record easy to manage.'}
+              ? 'E-Sewa Tarapur एक व्यवस्थित आवेदन एवं शिकायत प्रबंधन पोर्टल है, जहाँ प्राप्त आवेदनों का रिकॉर्ड, उनकी प्राथमिकता, वर्तमान स्थिति और आगे की कार्रवाई को एक ही स्थान पर व्यवस्थित किया जा सकता है।'
+              : 'E-Sewa Tarapur brings applications, records, follow-ups and progress tracking together in one organized platform. Find the information you need, monitor application status and keep every record easy to manage.'}
           </p>
 
           {/* Buttons */}

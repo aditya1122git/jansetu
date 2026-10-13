@@ -73,60 +73,54 @@ router.get('/dashboard-stats', async (req, res) => {
   }
 });
 
-// GET /api/reports/district-wise
-router.get('/district-wise', async (req, res) => {
+// GET /api/reports/block-wise
+router.get('/block-wise', async (req, res) => {
   try {
     const operatorScope = getApplicationScope(req as AuthenticatedRequest);
-    const districts = await database.district.findMany({
-      where: { isActive: true },
-      orderBy: { name: 'asc' },
-      include: {
-        _count: {
-          select: {
-            applications: true,
-            constituencies: true
-          }
-        },
-        applications: {
-          where: operatorScope,
-          select: {
-            priority: true,
-            status: true
-          }
-        }
-      }
+    const blocks = [
+      { blockName: 'Asarganj', blockLgdCode: '2451' },
+      { blockName: 'Haveli Kharagpur', blockLgdCode: '1872' },
+      { blockName: 'Sangrampur', blockLgdCode: '2457' },
+      { blockName: 'Tarapur', blockLgdCode: '2458' },
+      { blockName: 'Tetiha Bambar', blockLgdCode: '1877' }
+    ];
+    const applications = await database.application.findMany({
+      where: operatorScope,
+      select: { blockName: true, blockLgdCode: true, priority: true, status: true }
     });
 
-    const report = districts.map(d => {
+    const report = blocks.map(block => {
+      const blockApplications = applications.filter(application =>
+        application.blockName === block.blockName || String(application.blockLgdCode || '') === block.blockLgdCode
+      );
       let importantCount = 0;
       let normalCount = 0;
       let pendingCount = 0;
       let completedCount = 0;
 
-      for (const a of d.applications) {
+      for (const a of blockApplications) {
         if (a.priority === 'IMPORTANT') importantCount++;
         else normalCount++;
         if (a.status === 'PENDING') pendingCount++;
-        if (a.status === 'COMPLETED') completedCount++;
+        if (['COMPLETED', 'DISPOSED'].includes(a.status)) completedCount++;
       }
 
       return {
-        districtId: d.id,
-        districtCode: d.code,
-        districtName: d.name,
-        totalSeats: d._count.constituencies,
-        totalApplications: d.applications.length,
+        ...block,
+        constituencyName: 'Tarapur',
+        districtName: 'Munger',
+        totalApplications: blockApplications.length,
         importantCount,
         normalCount,
         pendingCount,
         completedCount,
-        resolutionRate: d.applications.length > 0 ? Math.round((completedCount / d.applications.length) * 100) : 0
+        resolutionRate: blockApplications.length > 0 ? Math.round((completedCount / blockApplications.length) * 100) : 0
       };
     });
 
-    res.json({ districts: report });
+    res.json({ blocks: report });
   } catch (error: any) {
-    res.status(500).json({ error: 'Error calculating district-wise statistics' });
+    res.status(500).json({ error: 'Error calculating block-wise statistics' });
   }
 });
 

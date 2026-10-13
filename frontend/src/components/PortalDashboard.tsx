@@ -56,7 +56,7 @@ export const PortalDashboard: React.FC<PortalDashboardProps> = ({
         {currentUser.role === 'DATA_ENTRY' && (
           <section className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
             <div className="flex flex-col gap-4 bg-gradient-to-r from-blue-50 to-slate-50 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <div className="flex items-center gap-4"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#1C4D8D] text-white shadow-md"><UserIcon className="h-5 w-5" /></span><div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-blue-700">Operator Profile</p><h2 className="text-lg font-black text-slate-900">{currentUser.name}</h2><p className="text-xs text-slate-500">Authorized intake operator for E-Sewak Tarapur</p></div></div>
+              <div className="flex items-center gap-4"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#1C4D8D] text-white shadow-md"><UserIcon className="h-5 w-5" /></span><div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-blue-700">Operator Profile</p><h2 className="text-lg font-black text-slate-900">{currentUser.name}</h2><p className="text-xs text-slate-500">Authorized intake operator for E-Sewa Tarapur</p></div></div>
               <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-800"><MapPin className="h-3.5 w-3.5" />{currentUser.blockName || 'Block not assigned'} {currentUser.blockLgdCode ? `· LGD ${currentUser.blockLgdCode}` : ''}</span>
             </div>
             <div className="grid grid-cols-1 gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">

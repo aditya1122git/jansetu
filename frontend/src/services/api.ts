@@ -5,7 +5,7 @@ import {
   ComplaintCategory,
   Application,
   DashboardStats,
-  DistrictStat,
+  BlockStat,
   CategoryStat,
   Appointment
 } from '../types';
@@ -226,7 +226,7 @@ export const api = {
     return data;
   },
 
-  subscribeToAppointmentEvents(onUpdate: () => void): () => void {
+  subscribeToAppointmentEvents(onUpdate: (event: { action: string; operatorId: string; appointmentId?: string; visitorName?: string; appointmentDate?: string | null; appointmentTime?: string | null }) => void): () => void {
     let stopped = false;
     let activeController: AbortController | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -251,7 +251,14 @@ export const api = {
           const events = buffer.split('\n\n');
           buffer = events.pop() || '';
           events.forEach(eventBlock => {
-            if (eventBlock.includes('event: appointment-update')) onUpdate();
+            if (!eventBlock.includes('event: appointment-update')) return;
+            const dataLine = eventBlock.split('\n').find(line => line.startsWith('data:'));
+            if (!dataLine) return;
+            try {
+              onUpdate(JSON.parse(dataLine.slice(5).trim()));
+            } catch {
+              // Ignore malformed stream messages and keep the connection alive.
+            }
           });
         }
       } catch (error) {
@@ -280,7 +287,7 @@ export const api = {
     return data;
   },
 
-  async decideAppointment(id: string, payload: { decision: 'APPROVE' | 'REJECT'; appointmentDate?: string; appointmentTime?: string }): Promise<{ success: boolean; appointment: Appointment }> {
+  async decideAppointment(id: string, payload: { decision: 'APPROVE' | 'REJECT' | 'RESCHEDULE'; appointmentDate?: string; appointmentTime?: string }): Promise<{ success: boolean; appointment: Appointment }> {
     const res = await fetch(`${API_BASE}/appointments/${id}/decision`, {
       method: 'PATCH',
       headers: getHeaders(),
@@ -498,12 +505,12 @@ export const api = {
     return data;
   },
 
-  async getDistrictReports(): Promise<{ districts: DistrictStat[] }> {
-    const res = await fetch(`${API_BASE}/reports/district-wise`, {
+  async getBlockReports(): Promise<{ blocks: BlockStat[] }> {
+    const res = await fetch(`${API_BASE}/reports/block-wise`, {
       headers: getHeaders()
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to fetch district reports');
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch block reports');
     return data;
   },
 

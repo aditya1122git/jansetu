@@ -39,11 +39,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
   };
 
   const copy = language === 'hi' ? {
-    title: 'E-Sewak Tarapur में लॉगिन करें', subtitle: 'अपने अधिकृत खाते से साइन इन करें', email: 'ईमेल',
+    title: 'E-Sewa Tarapur में लॉगिन करें', subtitle: 'अपने अधिकृत खाते से साइन इन करें', email: 'ईमेल',
     password: 'पासवर्ड', captcha: 'कैप्चा', login: 'साइन इन करें', forgot: 'पासवर्ड भूल गए?',
     back: 'लॉगिन पर वापस जाएँ', send: 'रीसेट लिंक बनाएँ', reset: 'नया पासवर्ड सेट करें'
   } : {
-    title: 'Login to E-Sewak Tarapur', subtitle: 'Sign in with your authorized account', email: 'Email',
+    title: 'Login to E-Sewa Tarapur', subtitle: 'Sign in with your authorized account', email: 'Email',
     password: 'Password', captcha: 'CAPTCHA', login: 'Sign in', forgot: 'Forgot password?',
     back: 'Back to login', send: 'Send reset link', reset: 'Set new password'
   };
@@ -186,7 +186,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
           </div>
         </div>
       </section>
-      {!embedded && <footer className="login-footer">© {new Date().getFullYear()} E-Sewak Tarapur · Government of Bihar</footer>}
+      {!embedded && <footer className="login-footer">© {new Date().getFullYear()} E-Sewa Tarapur · Government of Bihar</footer>}
     </div>
   );
 };

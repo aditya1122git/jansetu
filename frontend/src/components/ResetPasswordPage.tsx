@@ -52,7 +52,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ token, onG
       <header className="reset-password-header">
         <div className="reset-password-brand">
           <span className="reset-password-logo"><Shield /></span>
-          <span><strong>E-Sewak Tarapur</strong><small>Application &amp; Grievance Management Portal</small></span>
+          <span><strong>E-Sewa Tarapur</strong><small>Application &amp; Grievance Management Portal</small></span>
         </div>
       </header>
 
@@ -71,7 +71,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ token, onG
             <form onSubmit={handleSubmit} className="login-form">
               <span className="reset-password-status"><Lock /></span>
               <h1>Create New Password</h1>
-              <p className="login-subtitle">Choose a strong password for your E-Sewak Tarapur account. This secure link can be used only once.</p>
+              <p className="login-subtitle">Choose a strong password for your E-Sewa Tarapur account. This secure link can be used only once.</p>
 
               {errorMsg && <div className="alert alert-danger login-alert"><AlertCircle /> {errorMsg}</div>}
 
@@ -96,7 +96,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ token, onG
           )}
         </div>
       </section>
-      <footer className="login-footer">© {new Date().getFullYear()} E-Sewak Tarapur · Secure account recovery</footer>
+      <footer className="login-footer">© {new Date().getFullYear()} E-Sewa Tarapur · Secure account recovery</footer>
     </main>
   );
 };

@@ -80,7 +80,7 @@ function toMongoWhere(model: ModelName, where: any = {}): any {
 function defaults(model: ModelName, data: any): any {
   const now = new Date();
   const modelDefaults: Record<ModelName, any> = {
-    User: { role: 'DATA_ENTRY', department: 'E-Sewak Tarapur Administration', isActive: true, createdAt: now, updatedAt: now },
+    User: { role: 'DATA_ENTRY', department: 'E-Sewa Tarapur Administration', isActive: true, createdAt: now, updatedAt: now },
     District: { state: 'Bihar', isActive: true, createdAt: now, updatedAt: now },
     AssemblyConstituency: { reservation: 'GEN', isActive: true, createdAt: now, updatedAt: now },
     ComplaintCategory: { isActive: true, createdAt: now, updatedAt: now },
@@ -263,6 +263,18 @@ export const database = {
       db.collection('PasswordResetToken').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'PasswordResetToken_expiry_ttl' }),
       db.collection('Appointment').createIndex({ operatorId: 1, createdAt: -1 }, { name: 'Appointment_operator_date_idx' }),
       db.collection('Appointment').createIndex({ status: 1, createdAt: -1 }, { name: 'Appointment_status_date_idx' })
+    ]);
+    // Preserve customized profiles while migrating only the former default brand values.
+    const formerBrand = ['E', 'Sewak Tarapur'].join('-');
+    await Promise.all([
+      db.collection('User').updateMany(
+        { name: `${formerBrand} Administrator` },
+        { $set: { name: 'E-Sewa Tarapur Administrator', updatedAt: new Date() } }
+      ),
+      db.collection('User').updateMany(
+        { department: `${formerBrand} Administration` },
+        { $set: { department: 'E-Sewa Tarapur Administration', updatedAt: new Date() } }
+      )
     ]);
   }
 };

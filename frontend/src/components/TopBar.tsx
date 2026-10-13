@@ -16,7 +16,7 @@ export const TopBar: React.FC<TopBarProps> = ({ language, setLanguage }) => {
         <div className="flex items-center gap-2.5 flex-wrap justify-center sm:justify-start">
           <span className="inline-flex items-center gap-1.5 font-bold text-amber-300">
             <Shield className="w-3.5 h-3.5" />
-            <span>E-Sewak Tarapur</span>
+            <span>E-Sewa Tarapur</span>
           </span>
           {language === 'hi' && (
             <>

@@ -75,7 +75,7 @@ export const JanSetuLogo: React.FC<JanSetuLogoProps> = ({
               isDark ? 'text-white' : 'text-[#1C4D8D]'
             }`}
           >
-            E-Sewak
+            E-Sewa
           </span>
           <span
             className="text-xl sm:text-2xl font-black tracking-tight text-[#C35504]"
@@ -87,7 +87,7 @@ export const JanSetuLogo: React.FC<JanSetuLogoProps> = ({
               isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-50 text-[#1C4D8D]'
             }`}
           >
-            ई-सेवक
+            ई-सेवा
           </span>
         </div>
 

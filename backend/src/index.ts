@@ -19,7 +19,7 @@ import { authenticateToken, AuthenticatedRequest, requireDataEntryOrAdmin } from
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-console.log('🚀 Starting E-Sewak Tarapur Server...');
+console.log('🚀 Starting E-Sewa Tarapur Server...');
 console.log('⚙️ Configuring middleware...');
 
 // Security Hardening Headers
@@ -164,7 +164,7 @@ app.get('/api/health', async (req, res) => {
   const maxMb = await getEffectiveMaxUploadSizeMb();
   res.json({
     status: 'ONLINE',
-    system: 'E-Sewak Tarapur — Application & Grievance Management Portal',
+    system: 'E-Sewa Tarapur — Application & Grievance Management Portal',
     version: '2.0.0',
     maxUploadSizeMb: maxMb,
     timestamp: new Date().toISOString()
@@ -224,9 +224,9 @@ async function startServer() {
     const serverError = error as NodeJS.ErrnoException;
     if (serverError.code === 'EADDRINUSE') {
       console.error(`❌ Port ${PORT} is already in use.`);
-      console.error('   E-Sewak Tarapur Server is probably already running. Stop the previous backend process before starting another one.');
+      console.error('   E-Sewa Tarapur Server is probably already running. Stop the previous backend process before starting another one.');
     } else {
-      console.error('❌ Unable to start E-Sewak Tarapur Server:', error instanceof Error ? error.message : error);
+      console.error('❌ Unable to start E-Sewa Tarapur Server:', error instanceof Error ? error.message : error);
     }
     await database.disconnect().catch(() => undefined);
     process.exit(1);

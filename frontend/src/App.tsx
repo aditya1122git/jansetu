@@ -99,6 +99,21 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('popstate', expireSessionOnBrowserBack);
   }, [currentUser]);
 
+  useEffect(() => {
+    if (currentUser?.role !== 'DATA_ENTRY') return;
+    return api.subscribeToAppointmentEvents((event) => {
+      if (event.action !== 'rescheduled') return;
+      const time = event.appointmentTime && /^\d{2}:\d{2}$/.test(event.appointmentTime)
+        ? (() => {
+            const [hourText, minute] = event.appointmentTime!.split(':');
+            const hour = Number(hourText);
+            return `${String(hour % 12 || 12).padStart(2, '0')}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
+          })()
+        : 'the updated time';
+      setRbacNotice(`Appointment rescheduled: ${event.visitorName || 'Visitor'} — ${event.appointmentDate || 'updated date'} at ${time}.`);
+    });
+  }, [currentUser]);
+
   const checkAuthSession = async () => {
     const token = localStorage.getItem('bacms_token');
     if (token) {
@@ -287,7 +302,7 @@ export const App: React.FC = () => {
             className="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shadow-lg ring-2 ring-white/20"
           />
           <div>
-            <div className="text-xl sm:text-2xl font-black text-white">E-Sewak Tarapur</div>
+            <div className="text-xl sm:text-2xl font-black text-white">E-Sewa Tarapur</div>
             <div className="text-xs text-blue-200">Application & Grievance Management Portal</div>
           </div>
         </div>
@@ -508,7 +523,7 @@ export const App: React.FC = () => {
             language={language}
           />
 
-          {/* 10. E-Sewak Tarapur Introduction Section with 3 Feature Blocks */}
+          {/* 10. E-Sewa Tarapur Introduction Section with 3 Feature Blocks */}
           <IntroSection language={language} />
 
           {/* 11. Simple Workflow Section with 4-Step Process */}

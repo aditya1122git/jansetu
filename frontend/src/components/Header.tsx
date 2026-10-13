@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Existing E-Sewak Tarapur Name & Logo clearly visible */}
+          {/* Existing E-Sewa Tarapur Name & Logo clearly visible */}
           <JanSetuLogo language={language} showTagline={true} />
         </div>
 

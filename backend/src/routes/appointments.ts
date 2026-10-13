@@ -19,7 +19,7 @@ router.get('/events', requireDataEntryOrAdmin, (req: AuthenticatedRequest, res: 
   res.flushHeaders?.();
   res.write('event: connected\ndata: {}\n\n');
 
-  const sendUpdate = (event: { operatorId: string; action: string }) => {
+  const sendUpdate = (event: { operatorId: string; action: string; appointmentId?: string; visitorName?: string; appointmentDate?: string | null; appointmentTime?: string | null }) => {
     if (req.user?.role === 'ADMIN' || req.user?.id === event.operatorId) {
       res.write(`event: appointment-update\ndata: ${JSON.stringify(event)}\n\n`);
     }
@@ -82,7 +82,7 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
       }
     });
 
-    appointmentEvents.emit('change', { operatorId: req.user.id, action: 'created' });
+    appointmentEvents.emit('change', { operatorId: req.user.id, appointmentId: appointment.id, visitorName: appointment.visitorName, action: 'created' });
     res.status(201).json({ success: true, appointment });
   } catch (error) {
     res.status(500).json({ error: 'Failed to register visitor appointment.' });
@@ -92,19 +92,22 @@ router.post('/', requireDataEntryOrAdmin, async (req: AuthenticatedRequest, res:
 router.patch('/:id/decision', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const decision = String(req.body.decision || '').toUpperCase();
-    if (!['APPROVE', 'REJECT'].includes(decision)) {
-      return res.status(400).json({ error: 'Decision must be APPROVE or REJECT.' });
+    if (!['APPROVE', 'REJECT', 'RESCHEDULE'].includes(decision)) {
+      return res.status(400).json({ error: 'Decision must be APPROVE, REJECT or RESCHEDULE.' });
     }
 
     const existing = await database.appointment.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'Appointment request not found.' });
-    if (existing.status !== 'PENDING') {
+    if (decision === 'RESCHEDULE' && existing.status !== 'CONFIRMED') {
+      return res.status(409).json({ error: 'Only a confirmed appointment can be rescheduled.' });
+    }
+    if (decision !== 'RESCHEDULE' && existing.status !== 'PENDING') {
       return res.status(409).json({ error: 'This appointment request has already been decided.' });
     }
 
     let appointmentDate: string | null = null;
     let appointmentTime: string | null = null;
-    if (decision === 'APPROVE') {
+    if (decision === 'APPROVE' || decision === 'RESCHEDULE') {
       appointmentDate = String(req.body.appointmentDate || '').trim();
       appointmentTime = String(req.body.appointmentTime || '').trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate) || !/^\d{2}:\d{2}$/.test(appointmentTime)) {
@@ -119,7 +122,7 @@ router.patch('/:id/decision', requireAdmin, async (req: AuthenticatedRequest, re
     const appointment = await database.appointment.update({
       where: { id: req.params.id },
       data: {
-        status: decision === 'APPROVE' ? 'CONFIRMED' : 'REJECTED',
+        status: decision === 'REJECT' ? 'REJECTED' : 'CONFIRMED',
         appointmentDate,
         appointmentTime,
         decidedById: req.user!.id,
@@ -128,7 +131,14 @@ router.patch('/:id/decision', requireAdmin, async (req: AuthenticatedRequest, re
       }
     });
 
-    appointmentEvents.emit('change', { operatorId: existing.operatorId, action: 'decided' });
+    appointmentEvents.emit('change', {
+      operatorId: existing.operatorId,
+      appointmentId: appointment.id,
+      visitorName: appointment.visitorName,
+      appointmentDate: appointment.appointmentDate,
+      appointmentTime: appointment.appointmentTime,
+      action: decision === 'RESCHEDULE' ? 'rescheduled' : 'decided'
+    });
     res.json({ success: true, appointment });
   } catch (error: any) {
     if (String(error?.message || '').includes('record not found')) {

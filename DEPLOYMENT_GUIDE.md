@@ -1,4 +1,4 @@
-# E-Sewak Tarapur — Deployment Guide
+# E-Sewa Tarapur — Deployment Guide
 
 ## Project structure
 
@@ -96,7 +96,7 @@ MAX_UPLOAD_SIZE_MB=200
 APP_PORT=5000
 SMTP_USER=your-google-account@gmail.com
 SMTP_APP_PASSWORD=your-16-character-google-app-password
-SMTP_FROM="E-Sewak Tarapur <your-google-account@gmail.com>"
+SMTP_FROM="E-Sewa Tarapur <your-google-account@gmail.com>"
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
 APP_BASE_URL=https://your-domain.example

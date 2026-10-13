@@ -27,7 +27,9 @@ import { ComplaintCategory, Application, User } from '../types';
 const TARAPUR_BLOCKS = [
   { name: 'Tarapur', lgdCode: '2458' },
   { name: 'Sangrampur', lgdCode: '2457' },
-  { name: 'Asarganj', lgdCode: '2451' }
+  { name: 'Asarganj', lgdCode: '2451' },
+  { name: 'Tetiha Bambar', lgdCode: '1877' },
+  { name: 'Haveli Kharagpur', lgdCode: '1872' }
 ] as const;
 
 interface ApplicationTableModalProps {
