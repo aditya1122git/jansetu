@@ -12,6 +12,7 @@ import applicationRoutes from './routes/applications';
 import reminderRoutes from './routes/reminders';
 import reportRoutes from './routes/reports';
 import settingsRoutes from './routes/settings';
+import appointmentRoutes from './routes/appointments';
 import { upload, uploadDir, verifyFileSignature, getConfiguredMaxUploadSizeMb, getEffectiveMaxUploadSizeMb, createUploader, cleanupAbandonedUploads, allowedExtensions } from './middleware/upload';
 import { authenticateToken, AuthenticatedRequest, requireDataEntryOrAdmin } from './middleware/auth';
 
@@ -156,6 +157,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -188,6 +190,7 @@ async function startServer() {
   try {
     console.log('🔗 Connecting to MongoDB...');
     await database.connect();
+    await database.createIndexes();
     console.log('✅ MongoDB connected successfully');
 
     const server = await new Promise<ReturnType<typeof app.listen>>((resolve, reject) => {

@@ -4,11 +4,12 @@ import { PlusCircle, Search, ArrowRight } from './icons';
 interface HeroSectionProps {
   onOpenSection: (section: 'form' | 'table') => void;
   language: 'hi' | 'en';
+  fullWidth?: boolean;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenSection, language }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenSection, language, fullWidth = false }) => {
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-6">
+    <div className={`${fullWidth ? 'w-full px-4 sm:px-6' : 'max-w-7xl px-4'} mx-auto mt-6`}>
       <div className="bg-gradient-to-r from-[#0f2d57] via-[#163c6f] to-[#1C4D8D] rounded-2xl p-6 sm:p-8 md:p-10 text-white shadow-xl relative overflow-hidden border border-blue-900/40">
         {/* Subtle decorative background circles */}
         <div className="absolute -top-24 -right-24 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />

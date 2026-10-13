@@ -14,8 +14,8 @@ import { Footer } from './components/Footer';
 import { ApplicationFormModal } from './components/ApplicationFormModal';
 import { ApplicationTableModal } from './components/ApplicationTableModal';
 import { AnalyticsModal } from './components/AnalyticsModal';
-import { MasterDataModal } from './components/MasterDataModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
+import { AppointmentsPage } from './components/AppointmentsPage';
 import { ApplicationDetailDrawer } from './components/ApplicationDetailDrawer';
 import { LoginPage } from './components/LoginPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
@@ -45,7 +45,7 @@ export const App: React.FC = () => {
 
   // Active Modals
   const [activeModal, setActiveModal] = useState<
-    'form' | 'table' | 'reports' | 'master' | 'admin' | null
+    'form' | 'table' | 'reports' | 'admin' | 'appointments' | null
   >(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
 
@@ -60,6 +60,21 @@ export const App: React.FC = () => {
       return;
     }
     checkAuthSession();
+  }, []);
+
+  useEffect(() => {
+    const handleServerSessionExpiry = () => {
+      setCurrentUser(null);
+      setSessionExpired(true);
+      setCurrentView('login');
+      setActiveModal(null);
+      setSelectedApp(null);
+      setDetailAppId(null);
+      setStats(null);
+      setRbacNotice(null);
+    };
+    window.addEventListener('bacms-session-expired', handleServerSessionExpiry);
+    return () => window.removeEventListener('bacms-session-expired', handleServerSessionExpiry);
   }, []);
 
   useEffect(() => {
@@ -136,7 +151,7 @@ export const App: React.FC = () => {
   };
 
   const handleOpenSection = (
-    section: 'form' | 'table' | 'reports' | 'master' | 'admin'
+    section: 'form' | 'table' | 'reports' | 'admin' | 'appointments'
   ) => {
     setRbacNotice(null);
 
@@ -167,12 +182,17 @@ export const App: React.FC = () => {
       }
     }
 
-    if ((section === 'admin' || section === 'master') && currentUser?.role !== 'ADMIN') {
+    if (section === 'admin' && currentUser?.role !== 'ADMIN') {
       setRbacNotice(
         language === 'hi'
           ? 'अनुमति अस्वीकृत: एडमिन डैशबोर्ड केवल व्यवस्थापक (Admin) के लिए अधिकृत है।'
           : 'Permission Denied: This section is restricted to Administrator role.'
       );
+      return;
+    }
+
+    if (section === 'appointments' && !['ADMIN', 'DATA_ENTRY'].includes(currentUser.role)) {
+      setRbacNotice('Permission Denied: Visitor appointments are available to administrators and operators only.');
       return;
     }
 
@@ -237,8 +257,8 @@ export const App: React.FC = () => {
         );
       case 'reports':
         return <AnalyticsModal isOpen pageMode onClose={closePage} language={language} />;
-      case 'master':
-        return <MasterDataModal isOpen pageMode onClose={closePage} currentUser={currentUser} language={language} />;
+      case 'appointments':
+        return currentUser ? <AppointmentsPage currentUser={currentUser} /> : null;
       case 'admin':
         return currentUser?.role === 'ADMIN' ? (
           <AdminDashboardModal
@@ -328,11 +348,6 @@ export const App: React.FC = () => {
       {/* 2. Official Header */}
       <Header
         currentUser={currentUser}
-        onOpenLogin={() => {
-          setSessionExpired(false);
-          setCurrentView('login');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
         onLogout={handleLogout}
         language={language}
       />
@@ -387,13 +402,29 @@ export const App: React.FC = () => {
         <main className="workspace-main">{renderActivePage()}</main>
       ) : currentView === 'home' ? (
         <main className="flex-grow">
-          {/* 4. Hero Carousel (Preserving original photographs and 4000ms transition) */}
+          {/* Preserve the original homepage order: slideshow first. */}
           <HeroSlider />
 
-          {/* 5. Homepage Hero Section with Official Headings & Primary/Secondary Actions */}
+          {/* Every Application Matters card. */}
           <HeroSection
             onOpenSection={handleOpenSection}
             language={language}
+          />
+
+          {/* Login card is visible by default directly after the action card. */}
+          <LoginPage
+            embedded
+            onLoginSuccess={(user) => {
+              setSessionExpired(false);
+              setCurrentUser(user);
+              setCurrentView('dashboard');
+              loadDashboardStats();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            language={language}
+            setLanguage={setLanguage}
+            settings={settings}
+            onGoHome={() => undefined}
           />
 
           {/* 6. Database Summary Overview Cards */}
@@ -552,12 +583,16 @@ export const App: React.FC = () => {
           </section>
         </main>
       ) : currentUser ? (
-        <PortalDashboard
-          currentUser={currentUser}
-          stats={stats}
-          onOpenSection={handleOpenSection}
-          onOpenFilter={handleStatCardClick}
-        />
+        <>
+          <HeroSlider />
+          <HeroSection onOpenSection={handleOpenSection} language={language} fullWidth />
+          <PortalDashboard
+            currentUser={currentUser}
+            stats={stats}
+            onOpenSection={handleOpenSection}
+            onOpenFilter={handleStatCardClick}
+          />
+        </>
       ) : null}
 
       {currentView === 'home' && !activeModal && (

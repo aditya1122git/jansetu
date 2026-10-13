@@ -3,7 +3,7 @@ import { JanSetuLogo } from './JanSetuLogo';
 import { Home, FileText, Database, BarChart3, ChevronRight } from './icons';
 
 interface FooterProps {
-  onOpenSection: (section: 'form' | 'table' | 'reports' | 'master') => void;
+  onOpenSection: (section: 'form' | 'table' | 'reports' | 'admin' | 'appointments') => void;
   language: 'hi' | 'en';
 }
 

@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Home, Menu, X, ChevronDown, FileText, Database, BarChart3, Shield, MapPin } from './icons';
+import React, { useState } from 'react';
+import { Home, Menu, X, FileText, Database, BarChart3, Shield, Calendar } from './icons';
 import { User } from '../types';
 
 interface NavbarProps {
   currentUser: User | null;
-  onOpenSection: (section: 'form' | 'table' | 'reports' | 'master' | 'admin') => void;
+  onOpenSection: (section: 'form' | 'table' | 'reports' | 'admin' | 'appointments') => void;
   language: 'hi' | 'en';
   onGoHome?: () => void;
 }
@@ -16,26 +16,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onGoHome
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [servicesDropdown, setServicesDropdown] = useState(false);
-  const servicesMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (servicesMenuRef.current && !servicesMenuRef.current.contains(event.target as Node)) {
-        setServicesDropdown(false);
-      }
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setServicesDropdown(false);
-    };
-
-    document.addEventListener('mousedown', closeOnOutsideClick);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('mousedown', closeOnOutsideClick);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, []);
 
   return (
     <nav className="bg-[#1C4D8D] text-white shadow-md sticky top-0 z-40 border-t border-blue-800">
@@ -59,46 +39,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Desktop Menu */}
         <div className={currentUser ? 'hidden md:flex items-center space-x-1 text-sm font-medium' : 'hidden'}>
-          {/* Services Dropdown */}
-          <div ref={servicesMenuRef} className="relative">
+          {/* Direct application entry action; database already has its own item. */}
+          <div className="relative">
             <button
-              onClick={() => setServicesDropdown(value => !value)}
-              aria-haspopup="menu"
-              aria-expanded={servicesDropdown}
+              onClick={() => onOpenSection('form')}
               className="flex items-center gap-1 px-3 py-2 rounded hover:bg-[#163c6f] transition"
             >
               <FileText className="w-4 h-4 text-blue-200" />
-              <span>{language === 'hi' ? 'आवेदन सेवाएं' : 'Application Services'}</span>
-              <ChevronDown className="w-3.5 h-3.5" />
+              <span>{language === 'hi' ? 'नया आवेदन / शिकायत' : 'New Application / Complaint'}</span>
             </button>
-
-            {servicesDropdown && (
-              <div
-                role="menu"
-                className="absolute top-full left-0 mt-0.5 w-60 bg-white text-gray-800 rounded-md shadow-xl border border-gray-100 py-1.5 z-50 animate-fadeIn"
-              >
-                <button
-                  onClick={() => {
-                    onOpenSection('form');
-                    setServicesDropdown(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-xs sm:text-sm hover:bg-orange-50 hover:text-[#C35504] flex items-center gap-2"
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#C35504]"></span>
-                  {language === 'hi' ? 'नया आवेदन / शिकायत दर्ज करें' : 'New Application / Complaint'}
-                </button>
-                <button
-                  onClick={() => {
-                    onOpenSection('table');
-                    setServicesDropdown(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-xs sm:text-sm hover:bg-blue-50 hover:text-[#1C4D8D] flex items-center gap-2"
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#1C4D8D]"></span>
-                  {language === 'hi' ? 'आवेदन स्थिति व डेटाबेस खोज' : 'Application Status & Database'}
-                </button>
-              </div>
-            )}
           </div>
 
           <button
@@ -117,13 +66,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>{language === 'hi' ? 'रिपोर्ट व एनालिटिक्स' : 'Reports & Analytics'}</span>
           </button>
 
-          {currentUser?.role === 'ADMIN' && (
+          {(currentUser?.role === 'ADMIN' || currentUser?.role === 'DATA_ENTRY') && (
             <button
-              onClick={() => onOpenSection('master')}
+              onClick={() => onOpenSection('appointments')}
               className="flex items-center gap-1.5 px-3 py-2 rounded hover:bg-[#163c6f] transition"
             >
-              <MapPin className="w-4 h-4 text-yellow-300" />
-              <span>{language === 'hi' ? 'बिहार मास्टर डेटा' : 'Bihar Master Data (38/243)'}</span>
+              <Calendar className="w-4 h-4 text-yellow-300" />
+              <span>{currentUser.role === 'ADMIN' ? 'Appointments' : 'Visitor'}</span>
             </button>
           )}
 
@@ -160,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="w-full text-left py-2 px-3 rounded hover:bg-[#1C4D8D] flex items-center gap-2"
           >
             <FileText className="w-4 h-4" />
-            {language === 'hi' ? 'नया आवेदन दर्ज करें' : 'New Application Entry'}
+            {language === 'hi' ? 'नया आवेदन / शिकायत' : 'New Application / Complaint'}
           </button>
           <button
             onClick={() => {
@@ -182,16 +131,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BarChart3 className="w-4 h-4" />
             {language === 'hi' ? 'रिपोर्ट्स व डैशबोर्ड' : 'Reports & Analytics'}
           </button>
-          {currentUser.role === 'ADMIN' && (
+          {(currentUser.role === 'ADMIN' || currentUser.role === 'DATA_ENTRY') && (
             <button
               onClick={() => {
-                onOpenSection('master');
+                onOpenSection('appointments');
                 setIsOpen(false);
               }}
               className="w-full text-left py-2 px-3 rounded hover:bg-[#1C4D8D] flex items-center gap-2"
             >
-              <MapPin className="w-4 h-4" />
-              {language === 'hi' ? 'बिहार 38 जिले व 243 निर्वाचन क्षेत्र' : 'Bihar Master Data (38 Districts & 243 ACs)'}
+              <Calendar className="w-4 h-4" />
+              {currentUser.role === 'ADMIN' ? 'Appointments' : 'Visitor Appointments'}
             </button>
           )}
           {currentUser && currentUser.role === 'ADMIN' && (

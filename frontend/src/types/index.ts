@@ -185,3 +185,25 @@ export interface SystemSettings {
   hasConfiguredHours: boolean;
 }
 
+export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED';
+
+export interface Appointment {
+  id: string;
+  visitorName: string;
+  phone: string;
+  address: string;
+  purpose: string;
+  status: AppointmentStatus;
+  operatorId: string;
+  operatorName: string;
+  operatorEmail: string;
+  operatorBlockName?: string | null;
+  operatorBlockLgdCode?: string | null;
+  appointmentDate?: string | null;
+  appointmentTime?: string | null;
+  decidedByName?: string;
+  decidedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

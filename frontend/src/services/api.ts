@@ -6,7 +6,8 @@ import {
   Application,
   DashboardStats,
   DistrictStat,
-  CategoryStat
+  CategoryStat,
+  Appointment
 } from '../types';
 
 const API_BASE = '/api';
@@ -32,7 +33,12 @@ async function fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Resp
   activeRequestCount += 1;
   notifyRequestActivity();
   try {
-    return await browserFetch(input, init);
+    const response = await browserFetch(input, init);
+    if (response.status === 401 && localStorage.getItem('bacms_token')) {
+      localStorage.removeItem('bacms_token');
+      window.dispatchEvent(new CustomEvent('bacms-session-expired'));
+    }
+    return response;
   } finally {
     activeRequestCount = Math.max(0, activeRequestCount - 1);
     notifyRequestActivity();
@@ -209,6 +215,79 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to delete operator account');
+    return data;
+  },
+
+  // --- Visitor Appointments ---
+  async getAppointments(): Promise<{ appointments: Appointment[] }> {
+    const res = await fetch(`${API_BASE}/appointments`, { headers: getHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load appointments');
+    return data;
+  },
+
+  subscribeToAppointmentEvents(onUpdate: () => void): () => void {
+    let stopped = false;
+    let activeController: AbortController | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = async () => {
+      if (stopped) return;
+      activeController = new AbortController();
+      try {
+        const response = await browserFetch(`${API_BASE}/appointments/events`, {
+          headers: getHeaders(),
+          signal: activeController.signal
+        });
+        if (!response.ok || !response.body) throw new Error('Appointment event stream unavailable');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (!stopped) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || '';
+          events.forEach(eventBlock => {
+            if (eventBlock.includes('event: appointment-update')) onUpdate();
+          });
+        }
+      } catch (error) {
+        if (stopped || (error instanceof DOMException && error.name === 'AbortError')) return;
+      }
+
+      if (!stopped) reconnectTimer = setTimeout(() => void connect(), 2500);
+    };
+
+    void connect();
+    return () => {
+      stopped = true;
+      activeController?.abort();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  },
+
+  async createAppointment(payload: { visitorName: string; phone: string; address: string; purpose: string }): Promise<{ success: boolean; appointment: Appointment }> {
+    const res = await fetch(`${API_BASE}/appointments`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to register visitor appointment');
+    return data;
+  },
+
+  async decideAppointment(id: string, payload: { decision: 'APPROVE' | 'REJECT'; appointmentDate?: string; appointmentTime?: string }): Promise<{ success: boolean; appointment: Appointment }> {
+    const res = await fetch(`${API_BASE}/appointments/${id}/decision`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update appointment');
     return data;
   },
 

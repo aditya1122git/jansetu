@@ -279,7 +279,7 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
   return (
     <div className={pageMode ? 'workspace-page' : 'fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4'}>
       {actionNotice && (
-        <div className="fixed right-4 top-24 z-[80] w-[min(92vw,390px)] rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl" role="status">
+        <div className="fixed right-4 top-24 z-[70] w-[min(92vw,390px)] rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl" role="status">
           <div className="flex items-start gap-3">
             <div className="grid h-9 w-9 flex-none place-items-center rounded-full bg-emerald-100 text-emerald-700">
               <CheckCircle className="h-5 w-5" />
@@ -714,7 +714,7 @@ export const ApplicationTableModal: React.FC<ApplicationTableModalProps> = ({
         {/* Password-protected destructive action confirmation */}
         {destructiveAction && createPortal((
           <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-md"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-md"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) closeDeleteConfirmation();
             }}

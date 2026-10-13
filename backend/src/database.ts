@@ -6,10 +6,10 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 type ModelName =
   | 'User' | 'District' | 'AssemblyConstituency' | 'ComplaintCategory'
-  | 'Application' | 'FollowUp' | 'AuditLog' | 'SystemSetting' | 'PasswordResetToken';
+  | 'Application' | 'FollowUp' | 'AuditLog' | 'SystemSetting' | 'PasswordResetToken' | 'Appointment';
 
 const objectIdModels = new Set<ModelName>([
-  'User', 'ComplaintCategory', 'Application', 'FollowUp', 'AuditLog', 'SystemSetting', 'PasswordResetToken'
+  'User', 'ComplaintCategory', 'Application', 'FollowUp', 'AuditLog', 'SystemSetting', 'PasswordResetToken', 'Appointment'
 ]);
 
 const uri = process.env.MONGODB_URI;
@@ -88,7 +88,8 @@ function defaults(model: ModelName, data: any): any {
     FollowUp: { createdAt: now },
     AuditLog: { createdAt: now },
     SystemSetting: { key: 'default', maxUploadSizeMb: 200, updatedAt: now },
-    PasswordResetToken: { createdAt: now }
+    PasswordResetToken: { createdAt: now },
+    Appointment: { status: 'PENDING', createdAt: now, updatedAt: now }
   };
   const clean = Object.fromEntries(Object.entries(data || {}).filter(([, value]) => value !== undefined));
   const merged = { ...modelDefaults[model], ...clean };
@@ -203,7 +204,7 @@ class Repository {
   async update(args: any): Promise<any> {
     const collection = await this.collection();
     const data = { ...args.data };
-    if (['User', 'District', 'AssemblyConstituency', 'ComplaintCategory', 'Application', 'SystemSetting'].includes(this.model)) data.updatedAt = new Date();
+    if (['User', 'District', 'AssemblyConstituency', 'ComplaintCategory', 'Application', 'SystemSetting', 'Appointment'].includes(this.model)) data.updatedAt = new Date();
     for (const [key, value] of Object.entries(data)) data[key] = castValue(this.model, key, value);
     const result = await collection.findOneAndUpdate(toMongoWhere(this.model, args.where), { $set: data }, { returnDocument: 'after' });
     if (!result) throw new Error(`${this.model} record not found`);
@@ -239,6 +240,7 @@ export const database = {
   auditLog: new Repository('AuditLog'),
   systemSetting: new Repository('SystemSetting'),
   passwordResetToken: new Repository('PasswordResetToken'),
+  appointment: new Repository('Appointment'),
   connect: () => getDb(),
   disconnect: () => client.close(),
   async createIndexes() {
@@ -258,7 +260,9 @@ export const database = {
       db.collection('Application').createIndex({ blockLgdCode: 1, dateReceived: -1 }, { name: 'Application_block_date_idx' }),
       db.collection('SystemSetting').createIndex({ key: 1 }, { unique: true, name: 'SystemSetting_key_key' }),
       db.collection('PasswordResetToken').createIndex({ token: 1 }, { unique: true, name: 'PasswordResetToken_token_key' }),
-      db.collection('PasswordResetToken').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'PasswordResetToken_expiry_ttl' })
+      db.collection('PasswordResetToken').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'PasswordResetToken_expiry_ttl' }),
+      db.collection('Appointment').createIndex({ operatorId: 1, createdAt: -1 }, { name: 'Appointment_operator_date_idx' }),
+      db.collection('Appointment').createIndex({ status: 1, createdAt: -1 }, { name: 'Appointment_status_date_idx' })
     ]);
   }
 };

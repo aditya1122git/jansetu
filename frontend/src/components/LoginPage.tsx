@@ -14,11 +14,12 @@ interface LoginPageProps {
   settings: SystemSettings | null;
   sessionExpired?: boolean;
   onGoHome: () => void;
+  embedded?: boolean;
 }
 
 type AuthMode = 'login' | 'forgot';
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, setLanguage, settings, sessionExpired = false, onGoHome }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, setLanguage, settings, sessionExpired = false, onGoHome, embedded = false }) => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -112,20 +113,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
   };
 
   return (
-    <main className="login-page">
-      <TopBar language={language} setLanguage={setLanguage} settings={settings} />
-      <Header
-        currentUser={null}
-        onOpenLogin={scrollToLogin}
-        onLogout={() => undefined}
-        language={language}
-      />
-      <Navbar
-        currentUser={null}
-        onOpenSection={scrollToLogin}
-        language={language}
-        onGoHome={onGoHome}
-      />
+    <div className={`login-page${embedded ? ' embedded-login' : ''}`}>
+      {!embedded && <>
+        <TopBar language={language} setLanguage={setLanguage} settings={settings} />
+        <Header
+          currentUser={null}
+          onLogout={() => undefined}
+          language={language}
+        />
+        <Navbar
+          currentUser={null}
+          onOpenSection={scrollToLogin}
+          language={language}
+          onGoHome={onGoHome}
+        />
+      </>}
 
       <section ref={loginSectionRef} className="container login-stage">
         <div className="login-shell row g-0">
@@ -184,8 +186,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, language, 
           </div>
         </div>
       </section>
-      <footer className="login-footer">© {new Date().getFullYear()} E-Sewak Tarapur · Government of Bihar</footer>
-    </main>
+      {!embedded && <footer className="login-footer">© {new Date().getFullYear()} E-Sewak Tarapur · Government of Bihar</footer>}
+    </div>
   );
 };
 

@@ -1,18 +1,16 @@
 import React from 'react';
-import { User as UserIcon, LogOut, ShieldCheck } from './icons';
+import { LogOut, ShieldCheck } from './icons';
 import { User } from '../types';
 import { JanSetuLogo } from './JanSetuLogo';
 
 interface HeaderProps {
   currentUser: User | null;
-  onOpenLogin: () => void;
   onLogout: () => void;
   language: 'hi' | 'en';
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentUser,
-  onOpenLogin,
   onLogout,
   language
 }) => {
@@ -69,15 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
-          ) : (
-            <button
-              onClick={onOpenLogin}
-              className="inline-flex items-center gap-2 bg-[#1C4D8D] hover:bg-[#163c6f] text-white px-5 py-2 rounded-full font-semibold text-xs sm:text-sm shadow-md transition duration-200 transform hover:-translate-y-0.5"
-            >
-              <UserIcon className="w-4 h-4" />
-              <span>{language === 'hi' ? 'लॉगिन' : 'Login'}</span>
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

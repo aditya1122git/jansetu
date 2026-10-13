@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import { JWT_SECRET, authenticateToken, requireAdmin, AuthenticatedRequest, revokeToken } from '../middleware/auth';
+import { JWT_SECRET, SERVER_SESSION_ID, authenticateToken, requireAdmin, AuthenticatedRequest, revokeToken } from '../middleware/auth';
 
 const router = Router();
 
@@ -184,7 +184,8 @@ router.post('/login', async (req, res) => {
         role: user.role,
         department: user.department,
         blockName: user.blockName,
-        blockLgdCode: user.blockLgdCode
+        blockLgdCode: user.blockLgdCode,
+        serverSessionId: SERVER_SESSION_ID
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -413,7 +414,8 @@ router.post('/demo-switch', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department
+        department: user.department,
+        serverSessionId: SERVER_SESSION_ID
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -484,7 +486,8 @@ router.put('/profile', authenticateToken, requireAdmin, async (req: Authenticate
       role: updated.role,
       department: updated.department,
       blockName: updated.blockName,
-      blockLgdCode: updated.blockLgdCode
+      blockLgdCode: updated.blockLgdCode,
+      serverSessionId: SERVER_SESSION_ID
     }, JWT_SECRET, { expiresIn: '24h' });
 
     res.json({ success: true, message: 'Admin profile updated successfully.', user: updated, token });

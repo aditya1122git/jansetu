@@ -1,11 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const configuredJwtSecret = process.env.JWT_SECRET;
 if (process.env.NODE_ENV === 'production' && !configuredJwtSecret) {
   throw new Error('JWT_SECRET must be configured in production.');
 }
 export const JWT_SECRET = configuredJwtSecret || 'development-only-change-me';
+// Regenerated whenever the backend starts so tokens from an older process
+// cannot silently restore a login after the server has been restarted.
+export const SERVER_SESSION_ID = crypto.randomBytes(24).toString('hex');
 
 // In-memory token revocation registry (blacklists tokens on logout)
 const revokedTokens = new Set<string>();
@@ -28,6 +32,7 @@ export interface AuthUser {
   department?: string;
   blockName?: string;
   blockLgdCode?: string;
+  serverSessionId?: string;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -55,7 +60,11 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
     if (err) {
       return res.status(401).json({ error: 'Session expired or invalid token. Please log in again.' });
     }
-    req.user = decoded as AuthUser;
+    const authUser = decoded as AuthUser;
+    if (authUser.serverSessionId !== SERVER_SESSION_ID) {
+      return res.status(401).json({ error: 'Server session expired. Please log in again.' });
+    }
+    req.user = authUser;
     next();
   });
 };

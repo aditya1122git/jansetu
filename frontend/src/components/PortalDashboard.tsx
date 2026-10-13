@@ -1,11 +1,11 @@
 import React from 'react';
-import { BarChart3, CheckCircle, Clock, Database, Envelope, FileText, MapPin, Phone, PlusCircle, Shield, User as UserIcon } from './icons';
+import { BarChart3, Calendar, CheckCircle, Clock, Database, Envelope, FileText, MapPin, Phone, PlusCircle, Shield, User as UserIcon } from './icons';
 import { DashboardStats, User } from '../types';
 
 interface PortalDashboardProps {
   currentUser: User;
   stats: DashboardStats | null;
-  onOpenSection: (section: 'form' | 'table' | 'reports' | 'master' | 'admin') => void;
+  onOpenSection: (section: 'form' | 'table' | 'reports' | 'admin' | 'appointments') => void;
   onOpenFilter: (filter: 'all' | 'important' | 'normal' | 'active_followups' | 'disposed') => void;
 }
 
@@ -30,7 +30,7 @@ export const PortalDashboard: React.FC<PortalDashboardProps> = ({
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-200">Secure Operations Workspace</p>
               <h1 className="mt-1 text-2xl font-black">Welcome, {currentUser.name}</h1>
-              <p className="mt-1 text-sm text-blue-100">{currentUser.role === 'DATA_ENTRY' ? `Manage applications and reports for your assigned ${currentUser.blockName || 'service'} block.` : 'Manage applications, follow-ups, reports and master data from one place.'}</p>
+              <p className="mt-1 text-sm text-blue-100">{currentUser.role === 'DATA_ENTRY' ? `Manage applications, visitors and reports for your assigned ${currentUser.blockName || 'service'} block.` : 'Manage applications, visitor appointments, follow-ups and reports from one place.'}</p>
             </div>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold">
               <Shield className="h-4 w-4 text-amber-300" /> {currentUser.role === 'DATA_ENTRY' ? `OPERATOR · ${currentUser.blockName || 'BLOCK NOT SET'}` : currentUser.role}
@@ -77,7 +77,7 @@ export const PortalDashboard: React.FC<PortalDashboardProps> = ({
             <button onClick={() => onOpenSection('form')} className="flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4 text-left font-bold text-orange-800 transition hover:bg-orange-100"><PlusCircle className="h-5 w-5" /> New Application</button>
             <button onClick={() => onOpenSection('table')} className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-left font-bold text-blue-800 transition hover:bg-blue-100"><FileText className="h-5 w-5" /> Application Database</button>
             <button onClick={() => onOpenSection('reports')} className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left font-bold text-emerald-800 transition hover:bg-emerald-100"><BarChart3 className="h-5 w-5" /> Reports & Analytics</button>
-            {currentUser.role === 'ADMIN' && <button onClick={() => onOpenSection('master')} className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-left font-bold text-amber-800 transition hover:bg-amber-100"><MapPin className="h-5 w-5" /> Bihar Master Data</button>}
+            {(currentUser.role === 'ADMIN' || currentUser.role === 'DATA_ENTRY') && <button onClick={() => onOpenSection('appointments')} className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-left font-bold text-amber-800 transition hover:bg-amber-100"><Calendar className="h-5 w-5" /> {currentUser.role === 'ADMIN' ? 'Appointments' : 'Visitor Appointments'}</button>}
           </div>
           {currentUser.role === 'ADMIN' && (
             <button onClick={() => onOpenSection('admin')} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-bold text-white transition hover:bg-slate-800"><Shield className="h-4 w-4 text-amber-300" /> System Administration</button>
