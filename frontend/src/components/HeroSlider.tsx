@@ -19,8 +19,8 @@ const slides = [
   },
   {
     id: 4,
-    image: '/assets/Web_Images/Slide4.webp',
-    alt: 'सम्राट का संकल्प, बिहार का विकल्प - E-Sewa Tarapur'
+    image: '/assets/Web_Images/Slide4.png',
+    alt: 'सम्राट चौधरी की पहचान विकास, सुशासन और स्वाभिमान - E-Sewa Tarapur'
   }
 ];
 
